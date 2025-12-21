@@ -1,0 +1,144 @@
+"use client";
+
+import Image from "next/image";
+import { useState, useEffect } from "react";
+
+interface TutorialProps {
+  handleGumble: () => void;
+}
+export const Tutorial = ({ handleGumble }: TutorialProps) => {
+  const [showTutorial, setShowTutorial] = useState(() => {
+    const isFirst = window.localStorage.getItem("isFirstWindow");
+    return isFirst === null ? true : isFirst === "false" ? true : false;
+  });
+
+  const [currentStep, setCurrentStep] = useState(1);
+  const [fadeOut, setFadeOut] = useState(false);
+  const [threadId, setThreadId] = useState("");
+
+  const messages = [
+    "날이면 날마다 오는 기회가 아닙니다",
+    "그동안 감사한 일도 많고,",
+    "앞으로도 행복하게",
+    "덕질하자는 의미로 작은 쿠지판을 들고 왔어요!",
+    "별건 아니지만",
+    "다들 그냥 즐거운 마음으로 임해주세요!",
+    "준비가 되셨다면,",
+    "먼저 본인의 스레드 아이디를 입력해주세요!",
+  ];
+
+  const images = [
+    "/Giyu.webp",
+    "/Kyojuro.webp",
+    "/Mitsuri.webp",
+    "/Obanai.webp",
+    "/Gyomei.webp",
+    "/Tengen.webp",
+    "/Sanemi.webp",
+    "/Shinobu.webp",
+  ];
+
+  useEffect(() => {
+    if (showTutorial && currentStep < messages.length) {
+      const timer = setTimeout(() => {
+        setCurrentStep((prev) => prev + 1);
+      }, 3000); // 3 seconds
+      return () => clearTimeout(timer);
+    }
+  }, [showTutorial, currentStep]);
+
+  const handleGumbleComponent = () => {
+    setFadeOut(true);
+    setTimeout(() => {
+      setShowTutorial(false);
+      if (handleGumble) {
+        handleGumble();
+        window.localStorage.setItem("isFirstWindow", "true");
+      }
+    }, 1000); // fade out duration
+  };
+
+  const handleSubmitThreadId = () => {
+    if (threadId.trim() === "" || threadId === null) {
+      alert("스레드아이디를 입력해주세요!");
+      return;
+    }
+
+    document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
+    setCurrentStep(9);
+  };
+  return (
+    <div className="pd-4">
+      {showTutorial && (
+        <div className="fixed inset-0 flex items-center justify-center z-50">
+          <div className="relative flex flex-col items-center">
+            {currentStep < 8 && (
+              <div className="flex flex-col items-center animate-fade-in">
+                <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative">
+                  {messages[currentStep - 1]}
+                </div>
+                <Image
+                  src={images[currentStep - 1]}
+                  alt="Character"
+                  width={300}
+                  height={425}
+                  className="rounded-lg mt-2"
+                />
+              </div>
+            )}
+            {currentStep === 8 && (
+              <div className="flex flex-col items-center animate-fade-in">
+                <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative flex justify-center items-center">
+                  <input
+                    type="text"
+                    placeholder="본인의 스레드아이디를 입력해주세요"
+                    value={threadId}
+                    onChange={(e) => setThreadId(e.target.value)}
+                    className="border p-2 rounded text-sm"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSubmitThreadId();
+                    }}
+                    className="ml-2 !bg-[#6FAEB7] text-white px-2 py-1 rounded hover:bg-blue-700"
+                  >
+                    확인
+                  </button>
+                </div>
+                <Image
+                  src="/Muichiro.webp"
+                  alt="Muichiro"
+                  width={300}
+                  height={425}
+                  className="rounded-lg mt-2"
+                />
+              </div>
+            )}
+            {currentStep > images.length && (
+              <Image
+                src="/kuji.png"
+                alt="뽑기 기계"
+                width={300}
+                height={451}
+                className={`cursor-pointer animate-fade-in transition-opacity duration-1000 ${
+                  fadeOut ? "opacity-0" : "opacity-100"
+                }`}
+                onClick={() => handleGumbleComponent()}
+              />
+            )}
+            {currentStep > images.length && (
+              <div
+                className={`absolute top-[-60px] left-1/2 transform -translate-x-1/2 bg-white text-black px-4 py-2 rounded-lg shadow-lg after:content-[''] after:absolute after:top-full after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white animate-fade-in transition-opacity duration-1000 ${
+                  fadeOut ? "opacity-0" : "opacity-100"
+                }`}
+              >
+                {threadId}님! 이제, <br /> 뽑기 기계를 클릭해주세요!
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
