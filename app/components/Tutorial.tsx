@@ -1,5 +1,6 @@
 "use client";
 
+import { supabase } from "@/lib/supabase";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 
@@ -58,12 +59,34 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
     }, 1000); // fade out duration
   };
 
-  const handleSubmitThreadId = () => {
+  const handleSubmitThreadId = async () => {
     if (threadId.trim() === "" || threadId === null) {
       alert("스레드아이디를 입력해주세요!");
       return;
     }
 
+    const getFollowerData = async () => {
+      const { data } = (await supabase.from("follower").select("follower")) as {
+        data: { follower: string }[] | null;
+      };
+      console.log(data?.filter((item) => item.follower === threadId));
+      if (
+        (data?.filter((item) => item.follower === threadId).length ?? 0) === 0
+      ) {
+        alert(
+          "nav.jin과 팔로워 관계를 확인해주세요! \n 문의는 nav.jin에게 부탁드려요!"
+        );
+        return false;
+      } else return true;
+    };
+
+    const isFollower = await getFollowerData().then((res) =>
+      res === false ? false : true
+    );
+
+    if (isFollower === false) {
+      return;
+    }
     document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
     setCurrentStep(9);
   };

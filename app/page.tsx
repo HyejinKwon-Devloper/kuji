@@ -34,6 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     const isFirstWindow = window.localStorage.getItem("isFirstWindow");
+
     if (isFirstWindow === "true") {
       alert(
         "이미 뽑기를 진행하셨습니다! \n 만약 뽑기를 뽑지 못하셨다면, nav.jin에게 문의주세요!"
