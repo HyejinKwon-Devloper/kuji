@@ -108,6 +108,12 @@ export default function Home() {
             follower: getCookie("threadId") || "unknown",
             prize_id: prizeInfo.id ?? 0,
           })) as { data: PrizeRow[] | null };
+          (await supabase
+            .from("prize")
+            .update({
+              sale_yn: "N",
+            })
+            .eq("id", prizeInfo.id)) as { data: PrizeRow[] | null };
         }
       };
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
