@@ -6,7 +6,7 @@ import { Tutorial } from "./components/Tutorial";
 import { Ball } from "./components/Ball";
 import { Fireworks } from "./components/Fireworks";
 import { supabase } from "../lib/supabase";
-import { appendMissItems } from "@/lib/util";
+import { appendMissItems, getCookie } from "@/lib/util";
 
 interface PrizeRow {
   id?: number;
@@ -26,10 +26,10 @@ export default function Home() {
   });
   const [showBall, setShowBall] = useState(false);
   const [ballColor, setBallColor] = useState("red");
-  const [ballLetter, setBallLetter] = useState("A");
+  const [ballLetter, setBallLetter] = useState<PrizeRow | undefined>();
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoOpacity, setVideoOpacity] = useState(0);
-  const [letters, setLetters] = useState<string[]>([]);
+  const [letters, setLetters] = useState<PrizeRow[]>([]);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -57,10 +57,8 @@ export default function Home() {
       // Assuming each row has a 'prize' field or 'name' field
       setLetters([
         ...appendMissItems(
-          refined?.map((row) => {
-            return row.rank + " " + row.name;
-          }) ?? [],
-          "다음기회에",
+          refined ?? [],
+          { rank: "폭탄", name: "다음기회에" },
           50
         ),
       ]);
@@ -89,7 +87,7 @@ export default function Home() {
       setTimeout(() => setVideoOpacity(1), 100); // slight delay for fade in
       const video = videoRef.current;
       const handleLoadedMetadata = () => setVideoDuration(video.duration);
-      const handleTimeUpdate = () => {
+      const handleTimeUpdate = async () => {
         if (video.currentTime > videoDuration - 1 && !showBall) {
           const colors = [
             "blue",
@@ -103,8 +101,13 @@ export default function Home() {
           ];
           setBallColor(colors[Math.floor(Math.random() * colors.length)]);
           console.log(letters);
-          setBallLetter(letters[Math.floor(Math.random() * letters.length)]);
+          const prizeInfo = letters[Math.floor(Math.random() * letters.length)];
+          setBallLetter(prizeInfo);
           setShowBall(true);
+          const { data } = (await supabase.from("prize-own").insert({
+            follower: getCookie("threadId") || "unknown",
+            prize_id: prizeInfo.id ?? 0,
+          })) as { data: PrizeRow[] | null };
         }
       };
       video.addEventListener("loadedmetadata", handleLoadedMetadata);
@@ -167,7 +170,13 @@ export default function Home() {
           <Ball
             showBall={showBall}
             ballColor={ballColor}
-            ballLetter={ballLetter}
+            ballLetter={
+              <>
+                {ballLetter?.rank}
+                <br />
+                {ballLetter?.name}
+              </>
+            }
           />
           <Fireworks />
         </div>

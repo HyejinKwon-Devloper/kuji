@@ -1,9 +1,11 @@
 "use client";
 
+import { ReactNode } from "react";
+
 interface BallProps {
   showBall: boolean;
   ballColor: string;
-  ballLetter: string;
+  ballLetter: ReactNode;
 }
 
 export const Ball = ({ showBall, ballColor, ballLetter }: BallProps) => {
