@@ -229,7 +229,11 @@ export default function Home() {
         </div>
       )}
       {!isLoading && step === 3 && (
-        <CoinIntro handleStep={setStep} step={step} />
+        <CoinIntro
+          handleStep={setStep}
+          step={step}
+          handleResult={(value) => setResult(value)}
+        />
       )}
       {step === 4 && (
         <Game

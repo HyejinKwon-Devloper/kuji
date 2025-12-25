@@ -212,7 +212,7 @@ export function PrizeDraw() {
                           PRODUCT_LIST.find((item) => item.id == view.prizeId)
                             ?.image
                         }`
-                      : "/default.jpg"
+                      : "/victory.jpg"
                   }
                   alt={view.prize.name}
                   width={320}
