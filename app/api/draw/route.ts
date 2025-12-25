@@ -55,7 +55,7 @@ export async function POST(req: Request) {
     /**
      * 3️⃣ 확률 계산 (1 / 50)
      */
-    const win = Math.floor(Math.random() * 1) === 0;
+    const win = Math.floor(Math.random() * 30) === 0;
 
     /**
      * 4️⃣ 응모권 차감
