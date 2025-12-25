@@ -249,6 +249,7 @@ export const RpsStage = ({
 
     if (gameResult === "draw") {
       alert("무승부 입니다. 다시 도전하세요!");
+      setLock(false);
       dispatch({ type: "ROUND_RESET" });
       return;
     }

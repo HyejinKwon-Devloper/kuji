@@ -90,7 +90,7 @@ export function VictoryToProductsScreen({
         </div>
       ) : (
         <ProductGrid
-          products={PRODUCT_LIST}
+          products={products}
           follower={follower}
           request_num={request_num}
           onSelect={onSelectProduct}

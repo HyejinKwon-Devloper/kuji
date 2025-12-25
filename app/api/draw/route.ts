@@ -1,95 +1,101 @@
-// app/api/draw/route.ts
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
 
-type DrawRequest = {
-  threadId: string; // 쿠키 threadId 또는 사용자 식별자
-  prizeId: string; // 응모 상품 id (uuid/string 가정)
-};
-
 export async function POST(req: Request) {
   try {
-    const body = (await req.json()) as DrawRequest;
-    const { threadId, prizeId } = body;
+    const { threadId, prizeId } = await req.json();
 
     if (!threadId || !prizeId) {
       return NextResponse.json(
-        { ok: false, message: "threadId/prizeId가 필요합니다." },
+        { ok: false, message: "잘못된 요청입니다." },
         { status: 400 }
       );
     }
 
-    // 1) 현재 티켓 조회
-    const { data: ticketRow, error: tErr } = await supabase
-      .from("request-prize") // 당신 테이블명
-      .select("request_num")
-      .eq("follower", threadId)
-      .maybeSingle<{ request_num: number }>();
+    /**
+     * 1️⃣ 아직 판매중(sale_yn = 'Y')인 상품인지 확인
+     */
+    const { data: prize, error: prizeErr } = await supabase
+      .from("prize")
+      .select("id, sale_yn")
+      .eq("id", prizeId)
+      .eq("sale_yn", "Y")
+      .maybeSingle();
 
-    if (tErr) {
+    if (prizeErr) {
       return NextResponse.json(
-        { ok: false, message: tErr.message },
+        { ok: false, message: prizeErr.message },
         { status: 500 }
       );
     }
 
-    const currentTickets = ticketRow?.request_num ?? 0;
-    if (currentTickets <= 0) {
-      return NextResponse.json(
-        { ok: false, message: "응모권이 없습니다.", remainingTickets: 0 },
-        { status: 200 }
-      );
+    if (!prize) {
+      return NextResponse.json({
+        ok: false,
+        message: "이미 추첨이 완료된 상품입니다.",
+      });
     }
 
-    // 2) 1/50 확률 판정 (서버에서만)
-    const win = Math.floor(Math.random() * 30) === 0;
-
-    // 3) 티켓 1 차감 (DB에 저장)
-    //    ⚠️ 여기서 "조건부 업데이트"를 강하게 하고 싶으면:
-    //    - 가장 좋은 방법은 DB 트랜잭션/락인데, RPC 없이 가려면 아래처럼 업데이트 후 재조회로 최소 보정
-    const { error: uErr } = await supabase
+    /**
+     * 2️⃣ 응모권 조회
+     */
+    const { data: ticketRow, error: ticketErr } = await supabase
       .from("request-prize")
-      .update({ request_num: currentTickets - 1 })
+      .select("request_num")
+      .eq("follower", threadId)
+      .maybeSingle();
+
+    if (ticketErr || !ticketRow || ticketRow.request_num <= 0) {
+      return NextResponse.json({
+        ok: false,
+        message: "응모권이 부족합니다.",
+      });
+    }
+
+    /**
+     * 3️⃣ 확률 계산 (1 / 50)
+     */
+    const win = Math.floor(Math.random() * 50) === 0;
+
+    /**
+     * 4️⃣ 응모권 차감
+     */
+    const remainingTickets = ticketRow.request_num - 1;
+
+    await supabase
+      .from("request-prize")
+      .update({ request_num: remainingTickets })
       .eq("follower", threadId);
 
-    if (uErr) {
-      return NextResponse.json(
-        { ok: false, message: uErr.message },
-        { status: 500 }
-      );
+    /**
+     * 5️⃣ 결과 처리
+     */
+    if (win) {
+      // 🔥 당첨 처리
+      await supabase.from("prize-own").insert({
+        follower: threadId,
+        prize_id: prizeId,
+      });
+
+      // 🔥 해당 상품 판매 종료
+      await supabase.from("prize").update({ sale_yn: "N" }).eq("id", prizeId);
+    } else {
+      // 꽝 기록 (선택)
+      await supabase.from("prize-own").insert({
+        follower: threadId,
+        prize_id: null,
+      });
     }
-
-    // 4) 로그 저장 (추천: 중복/검증에 유용)
-    await supabase.from("prize_draw_log").insert({
-      follower: threadId,
-      prize_id: prizeId,
-      win,
-    });
-
-    // 5) 결과 저장 (당첨이면 prize-own에 prize_id, 꽝이면 null)
-    //    FK 때문에 0 넣지 말고 null
-    await supabase.from("prize-own").insert({
-      follower: threadId,
-      prize_id: win ? prizeId : null,
-    });
-
-    // 6) 남은 티켓 재조회해서 반환
-    const { data: afterRow } = await supabase
-      .from("request-prize")
-      .select("request_num")
-      .eq("follower", threadId)
-      .maybeSingle<{ request_num: number }>();
-
-    const remainingTickets = afterRow?.request_num ?? currentTickets - 1;
 
     return NextResponse.json({
       ok: true,
       win,
       remainingTickets,
     });
-  } catch (e: any) {
+  } catch (e) {
+    console.error(e);
     return NextResponse.json(
-      { ok: false, message: e?.message ?? "unknown error" },
+      { ok: false, message: "서버 오류" },
       { status: 500 }
     );
   }

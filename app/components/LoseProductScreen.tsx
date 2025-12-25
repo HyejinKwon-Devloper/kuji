@@ -43,8 +43,8 @@ export function LoseProductScreen({
 
       if (data) {
         const result = data.map((item1) => {
-          const info = PRODUCT_LIST.find((item2) => item1.id === item2.id);
-
+          console.log(PRODUCT_LIST.find((item2) => item1.id == item2.id));
+          const info = PRODUCT_LIST.find((item2) => item1.id == item2.id);
           return {
             ...info,
           };

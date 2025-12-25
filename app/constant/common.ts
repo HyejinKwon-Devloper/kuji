@@ -125,6 +125,12 @@ const PRODUCT_LIST = [
     image: "/kyo.jpg",
     description: "쿄쥬로 뽑기 가챠",
   },
+  {
+    id: "0",
+    name: "웃음벨",
+    image: "/victory.jpg",
+    description: "꺄륵",
+  },
 ];
 
 export { PHASE_CONTENT, RPS_OPTIONS, RPS_IMAGE_MAP, PRODUCT_LIST };
