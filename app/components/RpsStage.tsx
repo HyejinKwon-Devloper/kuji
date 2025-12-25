@@ -233,6 +233,7 @@ export const RpsStage = ({
     if (
       !window.confirm(`${label}를 선택하셨습니다.\n선택을 확정하시겠습니까?`)
     ) {
+      setLock(true);
       return;
     }
 
