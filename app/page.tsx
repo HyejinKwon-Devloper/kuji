@@ -1,186 +1,213 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect, useRef } from "react";
-import { Tutorial } from "./components/Tutorial";
-import { Ball } from "./components/Ball";
-import { Fireworks } from "./components/Fireworks";
-import { supabase } from "../lib/supabase";
-import { appendMissItems, getCookie } from "@/lib/util";
+import { useState, useEffect } from "react";
 
-interface PrizeRow {
-  id?: number;
-  rank?: string;
-  name?: string;
-  sale_yn?: string;
-  // Add other fields as needed
+import { CoinIntro } from "./components/CoinIntro";
+import { Game } from "./components/Game";
+import { RpsResult } from "./util/game.util";
+import { VictoryToProductsScreen } from "./components/VictoryToProductsScreen";
+import { LoseProductScreen } from "./components/LoseProductScreen";
+import { supabase } from "@/lib/supabase";
+import { getCookie } from "@/lib/util";
+import { PrizeDraw } from "./components/PrizeDraw";
+
+interface ISelectedProducts {
+  follower: string;
+  product_id: string;
+  name: string;
+  request_num: number;
 }
-
 export default function Home() {
-  const [isLoading, setIsLoading] = useState(true);
-  const [backgroundOpacity, setBackgroundOpacity] = useState(1);
-  const [isGumballVisible, setIsGumballVisible] = useState(false);
-  const [titlePosition, setTitlePosition] = useState({
+  const [titlePosition, setTitlePosition] = useState<{
+    top: string;
+    transform: string;
+  }>({
     top: "50%",
     transform: "translate(-50%, -50%)",
   });
-  const [showBall, setShowBall] = useState(false);
-  const [ballColor, setBallColor] = useState("red");
-  const [ballLetter, setBallLetter] = useState<PrizeRow | undefined>();
-  const [videoDuration, setVideoDuration] = useState(0);
-  const [videoOpacity, setVideoOpacity] = useState(0);
-  const [letters, setLetters] = useState<PrizeRow[]>([]);
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const [backgroundOpacity, setBackgroundOpacity] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [step, setStep] = useState<number>(1);
 
-  // useEffect(() => {
-  //   const fetchPrizes = async () => {
-  //     const { data } = (await supabase
-  //       .from("prize")
-  //       .select("id , rank, name, sale_yn")
-  //       .eq("sale_yn", "Y")) as {
-  //       data: PrizeRow[] | null;
-  //     };
-  //     const refined: PrizeRow[] = (data as PrizeRow[]).map((row) => ({
-  //       id: row.id,
-  //       rank: row.rank ?? "",
-  //       name: row.name ?? "",
-  //       sale_yn: row.sale_yn ?? "Y",
-  //     }));
+  const [totalCoin, setCoin] = useState<number>(2);
+  const [result, setResult] = useState<RpsResult | null>(null);
+  const [products, setProducts] = useState<ISelectedProducts>();
+  const [threadId, setThreadId] = useState("");
 
-  //     // Assuming each row has a 'prize' field or 'name' field
-  //     setLetters([
-  //       ...appendMissItems(
-  //         refined ?? [],
-  //         { rank: "폭탄", name: "다음기회에" },
-  //         50
-  //       ),
-  //     ]);
-  //   };
-  //   fetchPrizes();
+  const handleSubmitThreadId = async () => {
+    if (threadId.trim() === "" || threadId === null) {
+      alert("스레드아이디를 입력해주세요!");
+      return;
+    }
 
-  //   // Start title animation
-  //   setTimeout(() => {
-  //     setTitlePosition({ top: "1rem", transform: "translateX(-50%)" });
-  //   }, 700); // Start animation after 0.5s
+    const getFollowerData = async () => {
+      const { data } = (await supabase
+        .from("prize-own")
+        .select("follower")
+        .eq("prize_id", 0)) as {
+        data: { follower: string }[] | null;
+      };
+      console.log(data?.filter((item) => item.follower === threadId));
+      if (
+        (data?.filter((item) => item.follower === threadId).length ?? 0) === 0
+      ) {
+        alert(
+          "nav.jin과 팔로워 관계를 확인해주세요! \n 혹은 폭탄여부를 확인해주세요! \n 문의는 nav.jin에게 부탁드려요!"
+        );
+        return false;
+      } else return true;
+    };
 
-  //   // Simulate loading time
-  //   const timer = setTimeout(() => {
-  //     setIsLoading(false);
-  //     // Fade out the background
-  //     setBackgroundOpacity(0.3);
-  //     // After fade, hide background
-  //   }, 2000); // 2 seconds loading
+    const isFollower = await getFollowerData().then((res) =>
+      res === false ? false : true
+    );
 
-  //   return () => clearTimeout(timer);
-  // }, []);
+    if (isFollower === false) {
+      return;
+    }
+    document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
 
-  // useEffect(() => {
-  //   if (isGumballVisible && videoRef.current) {
-  //     videoRef.current.play();
-  //     setTimeout(() => setVideoOpacity(1), 100); // slight delay for fade in
-  //     const video = videoRef.current;
-  //     const handleLoadedMetadata = () => setVideoDuration(video.duration);
-  //     const handleTimeUpdate = async () => {
-  //       if (video.currentTime > videoDuration - 1 && !showBall) {
-  //         const colors = [
-  //           "blue",
-  //           "red",
-  //           "white",
-  //           "yellow",
-  //           "skyblue",
-  //           "green",
-  //           "pink",
-  //           "orange",
-  //         ];
-  //         setBallColor(colors[Math.floor(Math.random() * colors.length)]);
-  //         console.log(letters);
-  //         const prizeInfo = letters[Math.floor(Math.random() * letters.length)];
-  //         setBallLetter(prizeInfo);
-  //         setShowBall(true);
-  //         const { data } = (await supabase.from("prize-own").insert({
-  //           follower: getCookie("threadId") || "unknown",
-  //           prize_id: prizeInfo.id ?? 0,
-  //         })) as { data: PrizeRow[] | null };
-  //         (await supabase
-  //           .from("prize")
-  //           .update({
-  //             sale_yn: "N",
-  //           })
-  //           .eq("id", prizeInfo.id)) as { data: PrizeRow[] | null };
-  //       }
-  //     };
-  //     video.addEventListener("loadedmetadata", handleLoadedMetadata);
-  //     video.addEventListener("timeupdate", handleTimeUpdate);
-  //     return () => {
-  //       video.removeEventListener("loadedmetadata", handleLoadedMetadata);
-  //       video.removeEventListener("timeupdate", handleTimeUpdate);
-  //     };
-  //   }
-  // }, [isGumballVisible, videoDuration, showBall]);
+    // follwer라면 다음 스텝
+    setStep((prev) => prev + 1);
+  };
 
-  return <h1>현재 서비스 점검 중입니다.</h1>;
-  // return (
-  //   <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-  //     {isLoading && (
-  //       <h1
-  //         className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
-  //         style={{ top: titlePosition.top, transform: titlePosition.transform }}
-  //       >
-  //         <span className="block sm:inline">Jin의 뽑기 World에</span>{" "}
-  //         <span className="block sm:inline">오신걸 환영합니다!</span>
-  //       </h1>
-  //     )}
-  //     <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start"></main>
-  //     {!isLoading && (
-  //       <Tutorial handleGumble={() => setIsGumballVisible(true)} />
-  //     )}
+  useEffect(() => {
+    // Start title animation
+    setTimeout(() => {
+      setTitlePosition({ top: "1rem", transform: "translateX(-50%)" });
+    }, 700); // Start animation after 0.5s
 
-  //     <div
-  //       className="fixed inset-0 z-40 transition-opacity duration-1000"
-  //       style={{ opacity: backgroundOpacity }}
-  //     >
-  //       <Image
-  //         src="/hashira.webp"
-  //         alt="Loading background"
-  //         fill
-  //         className="object-cover"
-  //       />
-  //     </div>
+    // Simulate loading time
+    const timer = setTimeout(() => {
+      // Fade out the background
+      setBackgroundOpacity(0.3);
+      setIsLoading(false);
+      const threadId = getCookie("threadId");
+      if (threadId) setStep(3);
+      else setStep(2);
+      // After fade, hide background
+    }, 2000); // 2 seconds loading
 
-  //     {isGumballVisible && (
-  //       <div className="fixed inset-0 flex items-center justify-center z-50">
-  //         <video
-  //           ref={videoRef}
-  //           preload="auto"
-  //           style={{
-  //             opacity: videoOpacity,
-  //             width: "300px",
-  //             height: "451px",
-  //             objectFit: "cover",
-  //             transition: "opacity 1s ease-in-out",
-  //           }}
-  //         >
-  //           <source src="/gumble.mp4" type="video/mp4" />
-  //           Your browser does not support the video tag.
-  //         </video>
-  //       </div>
-  //     )}
-  //     {showBall && (
-  //       <div className="fixed inset-0 flex items-center justify-center z-50">
-  //         <Ball
-  //           showBall={showBall}
-  //           ballColor={ballColor}
-  //           ballLetter={
-  //             <>
-  //               {ballLetter?.rank}
-  //               <br />
-  //               {ballLetter?.name}
-  //             </>
-  //           }
-  //         />
-  //         <Fireworks />
-  //       </div>
-  //     )}
-  //   </div>
-  // );
+    return () => {
+      clearTimeout(timer);
+    };
+  }, []);
+
+  const handleSelectProduct = async (value: ISelectedProducts) => {
+    const threadId = getCookie("threadId");
+    if (window.confirm(`${value.name}에 응모하시겠습니까?`)) {
+      const response = (await supabase
+        .from("request-prize")
+        .select("follower")
+        .eq("follower", threadId)) as {
+        data: { follower: string }[] | null;
+      };
+
+      console.log(response);
+      if (response.data?.length || 0 > 0) {
+        alert("이미 응모되었습니다.⭐");
+        setStep((prev) => prev + 1);
+        return;
+      }
+
+      const { data } = (await supabase.from("request-prize").insert({
+        follower: threadId,
+        prize_id: value.product_id,
+        request_num: value.request_num,
+      })) as {
+        data: { follower: string }[] | null;
+      };
+
+      setStep((prev) => prev + 1);
+    }
+  };
+
+  useEffect(() => {
+    console.log("step changed to:", step);
+  }, [step]);
+
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
+      {isLoading && (
+        <div className="flex h-120px">
+          <h1
+            className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
+            style={{
+              top: titlePosition.top,
+              transform: titlePosition.transform,
+            }}
+          >
+            <span className="block sm:inline">Jin의 뽑기 World에</span>{" "}
+            <span className="block sm:inline">오신걸 환영합니다!</span>
+          </h1>
+        </div>
+      )}
+      <div className="" style={{ opacity: backgroundOpacity }}>
+        <Image
+          src="/hashira.webp"
+          alt="Loading background"
+          fill
+          className="object-cover"
+        />
+      </div>
+      {!isLoading && step === 2 && (
+        <div className="flex flex-col items-center animate-fade-in">
+          <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative flex justify-center items-center">
+            <input
+              type="text"
+              placeholder="본인의 스레드아이디를 입력해주세요"
+              value={threadId}
+              onChange={(e) => setThreadId(e.target.value)}
+              className="border p-2 rounded text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                handleSubmitThreadId();
+              }}
+              className="ml-2 !bg-[#6FAEB7] text-white px-2 py-1 rounded hover:bg-blue-700"
+            >
+              확인
+            </button>
+          </div>
+          <Image
+            src="/Muichiro.webp"
+            alt="Muichiro"
+            width={300}
+            height={425}
+            className="rounded-lg mt-2"
+            style={{ zIndex: 3 }}
+          />
+        </div>
+      )}
+      {!isLoading && step === 3 && (
+        <CoinIntro handleStep={setStep} step={step} />
+      )}
+      {step === 4 && (
+        <Game
+          handleStep={(value) => setStep(value ? value : step + 1)}
+          step={step}
+          coin={totalCoin}
+          handleResult={(value) => setResult(value)}
+          handleCoin={(value) => setCoin(value ? value : totalCoin + 1)}
+        />
+      )}
+      {step >= 5 && step < 6 && result === "win" && (
+        <VictoryToProductsScreen
+          follower=""
+          request_num={totalCoin}
+          onSelectProduct={(values) => handleSelectProduct(values)}
+        />
+      )}
+      {step >= 5 && step < 6 && result === "lose" && (
+        <LoseProductScreen
+          follower=""
+          request_num={totalCoin}
+          onSelectProduct={(values) => handleSelectProduct(values)}
+        />
+      )}
+      {step >= 6 && <PrizeDraw />}
+    </div>
+  );
 }
