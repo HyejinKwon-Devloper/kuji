@@ -237,8 +237,7 @@ export const RpsStage = ({
     }
 
     const userChoice = value as RpsValue;
-    // const opponentChoice = getRandomRps();
-    const opponentChoice = "scissor";
+    const opponentChoice = getRandomRps();
     const gameResult = judgeRps(userChoice, opponentChoice);
 
     dispatch({ type: "ROUND_SET_SELECTION", selected: userChoice });
