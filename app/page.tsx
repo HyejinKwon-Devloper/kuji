@@ -121,7 +121,11 @@ export default function Home() {
 
   const handleSelectProduct = async (value: ISelectedProducts) => {
     const threadId = getCookie("threadId");
-    if (window.confirm(`${value.name}에 응모하시겠습니까?`)) {
+    if (
+      window.confirm(
+        `${value.name}에 응모하시겠습니까?\n변경이 불가하오니 신중하게 골라주세요!`
+      )
+    ) {
       const response = (await supabase
         .from("request-prize")
         .select("follower")
