@@ -255,6 +255,7 @@ const containerStyle: React.CSSProperties = {
   flexDirection: "column",
   gap: 12,
   zIndex: 3,
+  padding: "0 12px",
 };
 
 const topRowStyle: React.CSSProperties = {

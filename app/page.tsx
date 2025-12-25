@@ -32,7 +32,7 @@ export default function Home() {
 
   const [totalCoin, setCoin] = useState<number>(2);
   const [result, setResult] = useState<RpsResult | null>(null);
-  const [products, setProducts] = useState<ISelectedProducts>();
+
   const [threadId, setThreadId] = useState("");
 
   const handleSubmitThreadId = async () => {
@@ -84,8 +84,33 @@ export default function Home() {
       setBackgroundOpacity(0.3);
       setIsLoading(false);
       const threadId = getCookie("threadId");
-      if (threadId) setStep(3);
-      else setStep(2);
+      if (threadId) {
+        const getFollowerData = async () => {
+          const { data } = (await supabase
+            .from("request-prize")
+            .select("follower")
+            .eq("follower", threadId)) as {
+            data: { follower: string }[] | null;
+          };
+
+          console.log(
+            data?.filter((item) => item.follower === threadId).length
+          );
+          if (
+            (data?.filter((item) => item.follower === threadId).length ?? 0) ===
+            0
+          ) {
+            setStep(3);
+            return;
+          } else {
+            setResult("win");
+            setStep(6);
+            return;
+          }
+        };
+        getFollowerData();
+      } else setStep(2);
+
       // After fade, hide background
     }, 2000); // 2 seconds loading
 
@@ -104,7 +129,6 @@ export default function Home() {
         data: { follower: string }[] | null;
       };
 
-      console.log(response);
       if (response.data?.length || 0 > 0) {
         alert("이미 응모되었습니다.⭐");
         setStep((prev) => prev + 1);
@@ -123,6 +147,29 @@ export default function Home() {
     }
   };
 
+  const handleCoin = async (value?: number) => {
+    const { data } = (await supabase
+      .from("request-prize")
+      .select("request_num")
+      .eq("follower", threadId)) as {
+      data: { request_num: number }[] | null;
+    };
+
+    if (
+      value !== 1 &&
+      data &&
+      data.filter((item) => item.request_num > 5).length > 0
+    ) {
+      alert("coin은 5개를 넘길 수 없습니다.");
+      return;
+    }
+    if (totalCoin >= 5) {
+      alert("coin은 5개를 넘길 수 없습니다.");
+      return;
+    }
+
+    setCoin(value ? value : totalCoin + 1);
+  };
   useEffect(() => {
     console.log("step changed to:", step);
   }, [step]);
@@ -190,19 +237,19 @@ export default function Home() {
           step={step}
           coin={totalCoin}
           handleResult={(value) => setResult(value)}
-          handleCoin={(value) => setCoin(value ? value : totalCoin + 1)}
+          handleCoin={(value) => handleCoin(value ? value : totalCoin + 1)}
         />
       )}
       {step >= 5 && step < 6 && result === "win" && (
         <VictoryToProductsScreen
-          follower=""
+          follower={threadId}
           request_num={totalCoin}
           onSelectProduct={(values) => handleSelectProduct(values)}
         />
       )}
       {step >= 5 && step < 6 && result === "lose" && (
         <LoseProductScreen
-          follower=""
+          follower={threadId}
           request_num={totalCoin}
           onSelectProduct={(values) => handleSelectProduct(values)}
         />

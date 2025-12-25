@@ -39,29 +39,6 @@ export const Game = ({
       setLoading(false);
     }, 1500);
 
-    const getData = async () => {
-      const { data } = await supabase
-        .from("coin-own")
-        .select("*")
-        .maybeSingle<Apply>();
-      return data;
-    };
-
-    const data = getData().then((res) => {
-      handleCoin(res?.coin ?? 2);
-      if (res?.go_yn === "Y") {
-        setPhase(
-          res?.first === "Y"
-            ? 5
-            : res?.second === "Y"
-            ? 7
-            : res?.third === "Y"
-            ? 8
-            : 1
-        );
-      }
-    });
-
     return () => {
       clearTimeout(start);
     };
@@ -111,6 +88,7 @@ const headerStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
+  padding: "0 12px",
 };
 
 const titleStyle: React.CSSProperties = {

@@ -275,15 +275,6 @@ export const RpsStage = ({
     alert("축하합니다!!! 전승입니다!!");
 
     handleCoin(curruntCoin + 1);
-    const { data } = (await supabase.from("coin-own").insert({
-      first: "Y",
-      second: "Y",
-      third: "Y",
-      coin: curruntCoin + 1,
-      go_yn: "Y",
-    })) as {
-      data: { follower: string }[] | null;
-    };
     onResult?.("win");
     handleStep?.();
   };
@@ -294,16 +285,6 @@ export const RpsStage = ({
     dispatch({ type: "ROUND_RESET" });
 
     const nextIndex = state.groupIndex + 1;
-
-    const { data } = (await supabase.from("coin-own").insert({
-      first: winCount >= 1 ? "Y" : "N",
-      second: winCount >= 2 ? "Y" : "N",
-      third: winCount >= 3 ? "Y" : "N",
-      coin: coin,
-      go_yn: "Y",
-    })) as {
-      data: { follower: string }[] | null;
-    };
 
     // 다음 그룹이 없으면(즉 3판 끝) 여기서는 win 처리 혹은 종료
     if (nextIndex >= STAGE_GROUPS.length) {
@@ -321,15 +302,6 @@ export const RpsStage = ({
   const handleStop = async () => {
     // “이 시점에서 종료(승리로 종료)”로 처리
     onResult?.("win");
-    const { data } = (await supabase.from("coin-own").insert({
-      first: winCount >= 1 ? "Y" : "N",
-      second: winCount >= 2 ? "Y" : "N",
-      third: winCount >= 3 ? "Y" : "N",
-      coin: coin + 1,
-      go_yn: "N",
-    })) as {
-      data: { follower: string }[] | null;
-    };
 
     handleStep?.();
   };
@@ -373,8 +345,8 @@ export const RpsStage = ({
                 <Image
                   src={RPS_IMAGE_MAP[opponent]}
                   alt={opponent}
-                  width={64}
-                  height={64}
+                  width={120}
+                  height={120}
                 />
               </div>
 
@@ -416,6 +388,7 @@ const rpsContainerStyle: React.CSSProperties = {
   alignItems: "center",
   gap: 16,
   zIndex: 3,
+  padding: "0 12px",
 };
 
 const characterStyle: React.CSSProperties = {
