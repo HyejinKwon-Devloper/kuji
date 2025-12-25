@@ -7,7 +7,7 @@ export async function POST(req: Request) {
 
     if (!threadId || !prizeId) {
       return NextResponse.json(
-        { ok: false, message: "잘못된 요청입니다." },
+        { ok: false, message: "파파파팡-!웃음을 드립니다!" },
         { status: 400 }
       );
     }

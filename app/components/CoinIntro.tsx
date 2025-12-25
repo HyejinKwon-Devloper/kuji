@@ -8,9 +8,10 @@ import { BettingComponent } from "./BettingComponent";
 interface ICoinIntroProps {
   step?: number;
   handleStep?: (step: number) => void;
+  handleResult: (value: "win" | "lose" | "draw") => void;
 }
 
-export function CoinIntro({ step, handleStep }: ICoinIntroProps) {
+export function CoinIntro({ step, handleStep, handleResult }: ICoinIntroProps) {
   const [animateUp, setAnimateUp] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
 
@@ -38,13 +39,15 @@ export function CoinIntro({ step, handleStep }: ICoinIntroProps) {
       return;
     } else {
       alert("배팅이 취소되었습니다.");
-      handleStep?.(9);
+      handleStep?.(5);
+      handleResult("win");
     }
   };
 
   const handleCancleClick = () => {
     alert("배팅이 취소되었습니다.");
-    handleStep?.(9);
+    handleStep?.(5);
+    handleResult("win");
   };
 
   return (
