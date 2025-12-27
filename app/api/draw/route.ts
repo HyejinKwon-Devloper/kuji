@@ -53,7 +53,7 @@ export async function POST(req: Request) {
     }
 
     /**
-     * 3️⃣ 확률 계산 (1 / 50)
+     * 3️⃣ 확률 계산 (1 / 30)
      */
     const win = Math.floor(Math.random() * 30) === 0;
 
