@@ -181,88 +181,22 @@ export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       {isLoading && (
-        <div className="flex h-120px">
-          <h1
-            className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
-            style={{
-              top: titlePosition.top,
-              transform: titlePosition.transform,
-            }}
-          >
-            <span className="block sm:inline">Jin의 뽑기 World에</span>{" "}
-            <span className="block sm:inline">오신걸 환영합니다!</span>
-          </h1>
-        </div>
-      )}
-      <div className="" style={{ opacity: backgroundOpacity }}>
-        <Image
-          src="/hashira.webp"
-          alt="Loading background"
-          fill
-          className="object-cover"
-        />
-      </div>
-      {!isLoading && step === 2 && (
-        <div className="flex flex-col items-center animate-fade-in">
-          <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative flex justify-center items-center">
-            <input
-              type="text"
-              placeholder="본인의 스레드아이디를 입력해주세요"
-              value={threadId}
-              onChange={(e) => setThreadId(e.target.value)}
-              className="border p-2 rounded text-sm"
-            />
-            <button
-              type="button"
-              onClick={() => {
-                handleSubmitThreadId();
+        <>
+          <div className="flex h-120px">
+            <h1
+              className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
+              style={{
+                top: titlePosition.top,
+                transform: titlePosition.transform,
               }}
-              className="ml-2 !bg-[#6FAEB7] text-white px-2 py-1 rounded hover:bg-blue-700"
             >
-              확인
-            </button>
+              <span className="block sm:inline">Jin의 뽑기 World에</span>{" "}
+              <span className="block sm:inline">오신걸 환영합니다!</span>
+            </h1>
           </div>
-          <Image
-            src="/Muichiro.webp"
-            alt="Muichiro"
-            width={300}
-            height={425}
-            className="rounded-lg mt-2"
-            style={{ zIndex: 3 }}
-          />
-        </div>
+          <div>작업중입니다.</div>
+        </>
       )}
-      {!isLoading && step === 3 && (
-        <CoinIntro
-          handleStep={setStep}
-          step={step}
-          handleResult={(value) => setResult(value)}
-        />
-      )}
-      {step === 4 && (
-        <Game
-          handleStep={(value) => setStep(value ? value : step + 1)}
-          step={step}
-          coin={totalCoin}
-          handleResult={(value) => setResult(value)}
-          handleCoin={(value) => handleCoin(value ? value : totalCoin + 1)}
-        />
-      )}
-      {step >= 5 && step < 6 && result === "win" && (
-        <VictoryToProductsScreen
-          follower={threadId}
-          request_num={totalCoin}
-          onSelectProduct={(values) => handleSelectProduct(values)}
-        />
-      )}
-      {step >= 5 && step < 6 && result === "lose" && (
-        <LoseProductScreen
-          follower={threadId}
-          request_num={totalCoin}
-          onSelectProduct={(values) => handleSelectProduct(values)}
-        />
-      )}
-      {step >= 6 && <PrizeDraw />}
     </div>
   );
 }
