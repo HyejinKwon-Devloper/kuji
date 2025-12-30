@@ -348,10 +348,10 @@ export default function Home() {
               onClick={() => {
                 handleSubmitThreadId();
               }}
-              className="ml-2 !bg-[#6FAEB7] text-white px-2 py-1 rounded hover:bg-blue-700"
             >
-              확인
-            </button>
+              <span className="block sm:inline">Jin의 뽑기 World에</span>{" "}
+              <span className="block sm:inline">오신걸 환영합니다!</span>
+            </h1>
           </div>
           <Image
             src="/Muichiro.webp"
