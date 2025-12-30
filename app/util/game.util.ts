@@ -24,9 +24,9 @@ function judgeRps(user: RpsValue, opponent: RpsValue): RpsResult {
 }
 
 function whoWithGame(phase: number) {
-  if (phase < 6) return "탄지로";
-  else if (phase < 8) return "이노스케";
-  else if (phase < 10) return "젠이츠";
+  if (phase < 6) return "우즈이";
+  else if (phase < 8) return "오바나이";
+  else if (phase < 10) return "렌고쿠";
   else return "";
 }
 

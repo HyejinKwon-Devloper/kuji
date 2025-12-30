@@ -257,15 +257,92 @@ export const RpsStage = ({
 
     if (gameResult === "lose") {
       alert("아쉽게도 패배입니다.ㅠㅠ");
+
+      // coin-own 업데이트 (패배 시 coin = 1)
+      const threadId = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("threadId="))
+        ?.split("=")[1];
+
+      if (threadId) {
+        // 최신 레코드의 created_at 조회
+        const { data: latestCoin } = await supabase
+          .from("coin-own")
+          .select("created_at")
+          .eq("follower", threadId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestCoin) {
+          await supabase
+            .from("coin-own")
+            .update({
+              coin: 1,
+              go_phase: 0, // 패배 시 go_phase를 0으로 리셋하여 상품 선택으로 이동
+              first: "N",
+              second: "N",
+              third: "N",
+            })
+            .eq("follower", threadId)
+            .eq("created_at", latestCoin.created_at);
+        }
+      }
+
+      // DB 업데이트 후 UI 상태 업데이트
+      await handleCoin(1);
+
+      // 패배 알림을 읽을 시간을 주기 위해 2초 지연
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
+      // UI 업데이트 반영 시간 확보
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
       onResult?.("lose");
-      handleCoin(1);
       handleStep?.();
       return;
     }
 
     // win
     if (state.phase < 8) {
-      handleCoin(curruntCoin + 1);
+      const newCoin = curruntCoin + 1;
+
+      // coin-own 업데이트
+      const threadId = document.cookie
+        .split("; ")
+        .find((row) => row.startsWith("threadId="))
+        ?.split("=")[1];
+
+      if (threadId) {
+        // 최신 레코드의 created_at 조회
+        const { data: latestCoin } = await supabase
+          .from("coin-own")
+          .select("created_at")
+          .eq("follower", threadId)
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .single();
+
+        if (latestCoin) {
+          // phase에 따라 업데이트할 필드 결정
+          const updateData: any = { coin: newCoin };
+          if (state.phase === 4) {
+            updateData.first = "Y";
+            updateData.go_phase = 1;
+          } else if (state.phase === 6) {
+            updateData.second = "Y";
+            updateData.go_phase = 2;
+          }
+
+          await supabase
+            .from("coin-own")
+            .update(updateData)
+            .eq("follower", threadId)
+            .eq("created_at", latestCoin.created_at);
+        }
+      }
+
+      await handleCoin(newCoin);
       dispatch({ type: "SHOW_BUTTONS" });
       alert("축하합니다! 이기셨습니다~! 아래 GO / STOP 버튼을 선택해주세요.");
       setCount((prev) => prev + 1);
@@ -275,7 +352,34 @@ export const RpsStage = ({
     // 마지막 action(8)에서 승리 => 전승
     alert("축하합니다!!! 전승입니다!!");
 
-    handleCoin(curruntCoin + 1);
+    const newCoin = curruntCoin + 1;
+
+    // coin-own 업데이트
+    const threadId = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("threadId="))
+      ?.split("=")[1];
+
+    if (threadId) {
+      // 최신 레코드의 created_at 조회
+      const { data: latestCoin } = await supabase
+        .from("coin-own")
+        .select("created_at")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestCoin) {
+        await supabase
+          .from("coin-own")
+          .update({ coin: newCoin, third: "Y", go_phase: 3 })
+          .eq("follower", threadId)
+          .eq("created_at", latestCoin.created_at);
+      }
+    }
+
+    await handleCoin(newCoin);
     onResult?.("win");
     handleStep?.();
   };
@@ -302,8 +406,38 @@ export const RpsStage = ({
 
   const handleStop = async () => {
     // “이 시점에서 종료(승리로 종료)”로 처리
-    onResult?.("win");
+    const threadId = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("threadId="))
+      ?.split("=")[1];
 
+    if (threadId) {
+      // 최신 레코드의 created_at 조회
+      const { data: latestCoin } = await supabase
+        .from("coin-own")
+        .select("created_at")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestCoin) {
+        // 현재 phase에 따라 go_phase 결정
+        let goPhase = 0;
+        if (state.phase === 4) goPhase = 1;
+        else if (state.phase === 6) goPhase = 2;
+        else if (state.phase === 8) goPhase = 3;
+
+        // STOP을 눌렀으므로 go_phase 업데이트
+        await supabase
+          .from("coin-own")
+          .update({ go_phase: goPhase })
+          .eq("follower", threadId)
+          .eq("created_at", latestCoin.created_at);
+      }
+    }
+
+    onResult?.("win");
     handleStep?.();
   };
 
@@ -318,8 +452,8 @@ export const RpsStage = ({
         <Image
           src={content.image}
           alt={content.label}
-          width={160}
-          height={160}
+          width={240}
+          height={240}
         />
       </div>
 
@@ -393,8 +527,8 @@ const rpsContainerStyle: React.CSSProperties = {
 };
 
 const characterStyle: React.CSSProperties = {
-  width: 160,
-  height: 160,
+  width: 240,
+  height: 240,
   display: "flex",
   alignItems: "center",
   justifyContent: "center",

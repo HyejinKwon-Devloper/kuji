@@ -1,23 +1,29 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
-import { getCookie } from "@/lib/util";
-import { PRODUCT_LIST } from "../constant/common";
+import {
+  PRODUCT_LIST,
+  BOMB_PRODUCTS,
+  LUCKY_PRODUCTS,
+} from "../constant/common";
 
 type Prize = {
   id: string;
   name: string;
-  image?: string; // 실제 prize 테이블에 image가 있으면 string으로
+  image?: string;
 };
 
-type TicketRow = {
+interface ISelectedProducts {
   follower: string;
-  prize_id: string | null;
+  product_id: string;
+  name: string;
   request_num: number;
-  prize: Prize | null;
-};
+  isRandom?: boolean;
+}
+
+// TicketRow 타입은 현재 사용하지 않아 제거되었습니다.
 
 type ViewState = {
   tickets: number;
@@ -27,10 +33,32 @@ type ViewState = {
   loading: boolean;
 };
 
-export function PrizeDraw() {
+interface PrizeDrawModalProps {
+  open: boolean;
+  threadId: string;
+  product?: ISelectedProducts;
+  onClose: () => void;
+
+  /** 선택: 모달 열릴 때마다 새로고침할지 */
+  refetchOnOpen?: boolean;
+}
+
+/**
+ * PrizeDraw를 "모달" 형태로 감싼 버전
+ * - open=false면 렌더하지 않음(포탈 없이도 동작)
+ * - 바깥(overlay) 클릭 또는 X 버튼으로 닫기
+ * - ESC로 닫기
+ * - 스크롤 잠금(body overflow hidden)
+ */
+export function PrizeDrawModal({
+  open,
+  product,
+  threadId,
+  onClose,
+  refetchOnOpen = true,
+}: PrizeDrawModalProps) {
   const [drawing, setDrawing] = useState(false);
 
-  // ✅ 여러 setState 대신 상태를 한 덩어리로 관리 (cascading 방지)
   const [view, setView] = useState<ViewState>({
     tickets: 0,
     prizeId: null,
@@ -39,49 +67,54 @@ export function PrizeDraw() {
     loading: true,
   });
 
-  const threadId = getCookie("threadId");
+  const dialogRef = useRef<HTMLDivElement | null>(null);
 
   const canDraw = useMemo(() => {
     return (
+      open &&
       !view.loading &&
       !drawing &&
       view.tickets > 0 &&
       view.prizeId !== null &&
       view.prize !== null
     );
-  }, [view.loading, drawing, view.tickets, view.prizeId, view.prize]);
+  }, [open, view.loading, drawing, view.tickets, view.prizeId, view.prize]);
 
-  // ✅ fetchState를 useCallback으로 고정
   const fetchState = useCallback(async () => {
-    // effect가 실행될 때 동기 setState는 1회로 최소화
     setView((prev) => ({ ...prev, loading: true, message: "" }));
 
     if (!threadId) {
       setView((prev) => ({
         ...prev,
         loading: false,
-        message: "threadId 쿠키가 없습니다.",
+        message: "threadId가 없습니다.",
       }));
       return;
     }
 
-    const { data, error } = await supabase
-      .from("request-prize")
-      .select(
-        `
-    follower,
-    prize_id,
-    request_num,
-    prize:prize_id (
-      id,
-      name,
-      sale_yn
-    )
-  `
-      )
+    console.log(product);
+
+    // ✅ 모달로 받은 product가 없으면 어떤 상품을 보여줄지 결정 불가
+    if (!product?.product_id) {
+      setView((prev) => ({
+        ...prev,
+        loading: false,
+        tickets: 0,
+        prizeId: null,
+        prize: null,
+        message: "상품 정보가 없습니다.",
+      }));
+      return;
+    }
+
+    // ✅ coin-own에서 최신 코인(응모권) 조회
+    const { data: coinRow, error } = await supabase
+      .from("coin-own")
+      .select("coin")
       .eq("follower", threadId)
-      .eq("prize.sale_yn", "Y") // sale_yn 타입이 boolean이면 true로
-      .maybeSingle<TicketRow>();
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
 
     if (error) {
       setView((prev) => ({
@@ -92,37 +125,58 @@ export function PrizeDraw() {
       return;
     }
 
-    if (!data) {
-      setView((prev) => ({
-        ...prev,
-        loading: false,
-        tickets: 0,
-        prizeId: null,
-        prize: null,
-        message: "응모 데이터가 없습니다.",
-      }));
-      return;
-    }
-
-    // ✅ 결과를 한 번에 반영
+    const tickets = coinRow?.coin ?? 0;
 
     setView((prev) => ({
       ...prev,
       loading: false,
-      tickets: data.request_num ?? 0,
-      prizeId: data.prize_id ?? null,
-      prize: data.prize ?? null,
-      message: data.prize ? "" : "아직 응모할 상품이 선택되지 않았습니다.",
+      tickets,
+      prizeId: product.product_id,
+      prize: { id: product.product_id, name: product.name },
+      message: tickets > 0 ? "" : "응모권이 없습니다.",
     }));
-  }, [threadId]);
+  }, [threadId, product]);
 
-  // ✅ 의존성을 명확히(StrictMode에서도 안전)
+  // open 시점에만 fetch (StrictMode에서도 중복 호출 방지)
   useEffect(() => {
-    fetchState();
-  }, []);
+    if (!open) return;
+    if (!refetchOnOpen) return;
+
+    let canceled = false;
+    (async () => {
+      if (canceled) return;
+      await fetchState();
+    })();
+
+    return () => {
+      canceled = true;
+    };
+  }, [open, refetchOnOpen, fetchState]);
+
+  // ESC 닫기 + 스크롤 잠금
+  useEffect(() => {
+    if (!open) return;
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    window.addEventListener("keydown", onKeyDown);
+
+    // 열릴 때 포커스 이동(접근성/키보드 조작)
+    setTimeout(() => dialogRef.current?.focus(), 0);
+
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open, onClose]);
 
   const handleDraw = useCallback(async () => {
-    if (!canDraw || view.prizeId === null) return;
+    if (!canDraw || !product?.product_id) return;
 
     setDrawing(true);
     setView((prev) => ({ ...prev, message: "" }));
@@ -132,7 +186,7 @@ export function PrizeDraw() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         threadId,
-        prizeId: view.prizeId,
+        prizeId: product.product_id,
       }),
     });
 
@@ -143,13 +197,13 @@ export function PrizeDraw() {
         ...prev,
         message: json.message ?? "응모 처리 실패",
       }));
+      setDrawing(false);
       return;
     }
 
     const remainingTickets =
       typeof json?.remainingTickets === "number" ? json.remainingTickets : null;
 
-    // ✅ tickets도 한 번에
     setView((prev) => ({
       ...prev,
       tickets:
@@ -161,101 +215,201 @@ export function PrizeDraw() {
         : "아쉽게도 꽝입니다. 다시 도전해보세요.",
     }));
 
-    // ⚠️ FK 때문에 prize_id=0 금지 (null로)
-    if (json.win) {
-      await supabase.from("prize-own").insert({
-        follower: threadId,
-        prize_id: view.prizeId,
-      });
-    } else {
-      await supabase.from("prize-own").insert({
-        follower: threadId,
-        prize_id: 0,
-      });
+    // 전역 잔액 동기화 (헤더 CoinBalance 일관성 유지)
+    try {
+      const { useGameStore } = await import("../store/gameStore");
+      const { setBalance, setStep } = useGameStore.getState();
+      if (remainingTickets !== null) {
+        setBalance(remainingTickets);
+
+        // 코인이 0이 되면 오미쿠지로 이동
+        if (remainingTickets === 0) {
+          setTimeout(() => {
+            onClose();
+            setStep(6);
+          }, 2000); // 2초 후 이동
+        }
+      }
+    } catch {
+      // noop: SSR/빌드 문맥에서 에러 방지
     }
 
     setDrawing(false);
-  }, [canDraw, view.prizeId, threadId]);
+  }, [canDraw, product, threadId]);
+
+  // 랜덤 상품일 때 자동 응모
+  useEffect(() => {
+    if (!open || !product?.isRandom) return;
+    if (!canDraw) return;
+
+    // 데이터 로딩이 완료된 후 자동 응모
+    const timer = setTimeout(() => {
+      handleDraw();
+    }, 500); // 0.5초 후 자동 응모
+
+    return () => clearTimeout(timer);
+  }, [open, product?.isRandom, canDraw, handleDraw]);
+
+  if (!open) return null;
+
+  // 모든 상품 목록 (일반 + 꽝 + 행운)
+  const allProducts = [...PRODUCT_LIST, ...BOMB_PRODUCTS, ...LUCKY_PRODUCTS];
+
+  const imageSrc =
+    view.prizeId && allProducts.find((item) => item.id == view.prizeId)?.image
+      ? `${allProducts.find((item) => item.id == view.prizeId)!.image}`
+      : "/victory.jpg";
 
   return (
-    <div style={containerStyle}>
-      <div style={topRowStyle}>
-        <div style={ticketPillStyle}>
-          남은 응모권: <strong>{view.tickets}</strong>
+    <div
+      style={overlayStyle}
+      onMouseDown={(e) => {
+        // overlay 클릭 시 닫기 (내부 클릭은 무시)
+        if (e.target === e.currentTarget) onClose();
+      }}
+      aria-hidden={!open}
+    >
+      <div
+        ref={dialogRef}
+        style={modalStyle}
+        role="dialog"
+        aria-modal="true"
+        aria-label="상품 추첨"
+        tabIndex={-1}
+      >
+        {/* 헤더 */}
+        <div style={modalHeaderStyle}>
+          <div style={modalTitleStyle}>상품 추첨</div>
+          <button
+            type="button"
+            onClick={onClose}
+            style={closeButtonStyle}
+            aria-label="닫기"
+          >
+            ✕
+          </button>
         </div>
-        <button
-          style={refreshButtonStyle}
-          onClick={fetchState}
-          disabled={view.loading || drawing}
-        >
-          새로고침
-        </button>
-      </div>
 
-      <div style={cardStyle}>
-        <h2 style={titleStyle}>상품 추첨</h2>
-
-        {view.loading ? (
-          <div style={mutedStyle}>불러오는 중...</div>
-        ) : !view.prize ? (
-          <div style={mutedStyle}>
-            {view.message || "표시할 상품이 없습니다."}
-          </div>
-        ) : (
-          <>
-            <div style={prizeRowStyle}>
-              <div style={prizeImageWrapStyle}>
-                <Image
-                  src={
-                    view.prizeId
-                      ? `${
-                          PRODUCT_LIST.find((item) => item.id == view.prizeId)
-                            ?.image
-                        }`
-                      : "/victory.jpg"
-                  }
-                  alt={view.prize.name}
-                  width={320}
-                  height={240}
-                  style={prizeImageStyle}
-                />
-              </div>
-
-              <div style={prizeInfoStyle}>
-                <div style={prizeNameStyle}>{view.prize.name}</div>
-                <div style={mutedStyle}>응모권 1장당 1회 시도 가능</div>
-              </div>
+        {/* 바디 */}
+        <div style={containerStyle}>
+          <div style={topRowStyle}>
+            <div style={ticketPillStyle}>
+              남은 응모권: <strong>{view.tickets}</strong>
             </div>
-
             <button
-              style={{
-                ...drawButtonStyle,
-                ...(canDraw ? {} : disabledButtonStyle),
-              }}
-              onClick={handleDraw}
-              disabled={!canDraw}
+              style={refreshButtonStyle}
+              onClick={fetchState}
+              disabled={view.loading || drawing}
+              type="button"
             >
-              {drawing ? "추첨 중..." : "응모하기"}
+              새로고침
             </button>
+          </div>
 
-            {view.message && <div style={messageStyle}>{view.message}</div>}
-          </>
-        )}
+          <div style={cardStyle}>
+            {view.loading ? (
+              <div style={mutedStyle}>불러오는 중...</div>
+            ) : !view.prize ? (
+              <div style={mutedStyle}>
+                {view.message || "표시할 상품이 없습니다."}
+              </div>
+            ) : (
+              <>
+                <div style={prizeRowStyle}>
+                  <div style={prizeImageWrapStyle}>
+                    <Image
+                      src={imageSrc}
+                      alt={view.prize.name}
+                      width={320}
+                      height={240}
+                      style={prizeImageStyle}
+                    />
+                  </div>
+
+                  <div style={prizeInfoStyle}>
+                    <div style={prizeNameStyle}>{view.prize.name}</div>
+                    <div style={mutedStyle}>응모권 1장당 1회 시도 가능</div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  style={{
+                    ...drawButtonStyle,
+                    ...(canDraw ? {} : disabledButtonStyle),
+                  }}
+                  onClick={handleDraw}
+                  disabled={!canDraw}
+                >
+                  {drawing ? "추첨 중..." : "응모하기"}
+                </button>
+
+                {view.message && <div style={messageStyle}>{view.message}</div>}
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
-/* ===== styles (사용자 코드 그대로) ===== */
+/* ===================== MODAL STYLES ===================== */
+
+const overlayStyle: React.CSSProperties = {
+  position: "fixed",
+  inset: 0,
+  backgroundColor: "rgba(0,0,0,0.45)",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: 16,
+  zIndex: 9999,
+};
+
+const modalStyle: React.CSSProperties = {
+  width: "100%",
+  maxWidth: 480,
+  backgroundColor: "#ffffff",
+  borderRadius: 18,
+  border: "1px solid #e5e7eb",
+  boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+  overflow: "hidden",
+};
+
+const modalHeaderStyle: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  padding: "14px 14px 10px 14px",
+  borderBottom: "1px solid #e5e7eb",
+};
+
+const modalTitleStyle: React.CSSProperties = {
+  fontSize: 16,
+  fontWeight: 900,
+  color: "#111827",
+};
+
+const closeButtonStyle: React.CSSProperties = {
+  width: 34,
+  height: 34,
+  borderRadius: 10,
+  border: "1px solid #e5e7eb",
+  backgroundColor: "#f9fafb",
+  cursor: "pointer",
+  fontWeight: 900,
+  lineHeight: 1,
+};
+
+/* ===================== ORIGINAL STYLES (약간 정리) ===================== */
 
 const containerStyle: React.CSSProperties = {
   width: "100%",
-  maxWidth: 420,
   display: "flex",
   flexDirection: "column",
   gap: 12,
-  zIndex: 3,
-  padding: "0 12px",
+  padding: "12px 12px 14px 12px",
 };
 
 const topRowStyle: React.CSSProperties = {
@@ -282,24 +436,16 @@ const refreshButtonStyle: React.CSSProperties = {
   border: "1px solid #e5e7eb",
   cursor: "pointer",
   fontWeight: 600,
-  zIndex: 3,
 };
 
 const cardStyle: React.CSSProperties = {
   backgroundColor: "#ffffff",
   borderRadius: 16,
   border: "1px solid #e5e7eb",
-  padding: "16px 14px",
+  padding: "14px 14px",
   display: "flex",
   flexDirection: "column",
   gap: 12,
-};
-
-const titleStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 18,
-  fontWeight: 800,
-  color: "#111827",
 };
 
 const prizeRowStyle: React.CSSProperties = {

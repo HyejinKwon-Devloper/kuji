@@ -6,33 +6,24 @@ import { CoinBalance } from "./CoinBalance";
 import { RpsStage } from "./RpsStage";
 
 import { RpsResult } from "../util/game.util";
-import { supabase } from "@/lib/supabase";
 
 interface GameProps {
-  step?: number;
   coin: number;
   handleStep?: (step?: number) => void;
   handleResult?: (result: RpsResult) => void;
   handleCoin: (value?: number) => void;
-}
-
-interface Apply {
-  first: string;
-  second: string;
-  third: string;
-  go_yn: string;
-  coin: number;
+  initialPhase?: number;
 }
 
 export const Game = ({
-  step,
   coin,
   handleStep,
   handleResult,
   handleCoin,
+  initialPhase,
 }: GameProps) => {
   const [isLoading, setLoading] = useState(true);
-  const [phase, setPhase] = useState<number>(1);
+  const [phase, setPhase] = useState<number>(initialPhase ?? 1);
 
   useEffect(() => {
     const start = setTimeout(() => {
@@ -79,7 +70,7 @@ export const Game = ({
           />
         </>
       )}
-      <CoinBalance balance={coin} />
+      <CoinBalance />
     </div>
   );
 };
@@ -137,11 +128,4 @@ const stageStyle: React.CSSProperties = {
   alignItems: "center",
   justifyContent: "center",
   perspective: 800, // ⭐ 3D 회전 핵심
-};
-
-const futureSlotStyle: React.CSSProperties = {
-  minHeight: 80,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
 };

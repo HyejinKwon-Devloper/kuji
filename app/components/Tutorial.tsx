@@ -18,14 +18,15 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
   const [threadId, setThreadId] = useState("");
 
   const messages = [
-    "날이면 날마다 오는 기회가 아닙니다",
-    "그동안 감사한 일도 많고,",
-    "앞으로도 행복하게",
-    "덕질하자는 의미로 작은 쿠지판을 들고 왔어요!",
-    "별건 아니지만",
-    "다들 그냥 즐거운 마음으로 임해주세요!",
-    "준비가 되셨다면,",
-    "먼저 본인의 스레드 아이디를 입력해주세요!",
+    "그동안 재밌으셨나요?",
+    "별것 아닌 이벤트지만",
+    "모두 재미있게 즐겨주셔서 감사해요:)",
+    "2025년 모두 수고하셨구",
+    "2026년도 건강하고 즐거운일 가득하시길",
+    "그 누구보다도 바라겠습니다❤️",
+    "그동안 정말 감사했고",
+    "앞으로도 잘부탁드려요!",
+    "후기는 댓글에 남겨주세요💙",
   ];
 
   const images = [
@@ -37,6 +38,7 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
     "/Tengen.webp",
     "/Sanemi.webp",
     "/Shinobu.webp",
+    "/Muichiro.webp",
   ];
 
   useEffect(() => {
@@ -48,54 +50,54 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
     }
   }, [showTutorial, currentStep]);
 
-  const handleGumbleComponent = () => {
-    setFadeOut(true);
-    setTimeout(() => {
-      setShowTutorial(false);
-      if (handleGumble) {
-        handleGumble();
-        window.localStorage.setItem("isFirstWindow", "true");
-      }
-    }, 1000); // fade out duration
-  };
+  // const handleGumbleComponent = () => {
+  //   setFadeOut(true);
+  //   setTimeout(() => {
+  //     setShowTutorial(false);
+  //     if (handleGumble) {
+  //       handleGumble();
+  //       window.localStorage.setItem("isFirstWindow", "true");
+  //     }
+  //   }, 1000); // fade out duration
+  // };
 
-  const handleSubmitThreadId = async () => {
-    if (threadId.trim() === "" || threadId === null) {
-      alert("스레드아이디를 입력해주세요!");
-      return;
-    }
+  // const handleSubmitThreadId = async () => {
+  //   if (threadId.trim() === "" || threadId === null) {
+  //     alert("스레드아이디를 입력해주세요!");
+  //     return;
+  //   }
 
-    const getFollowerData = async () => {
-      const { data } = (await supabase.from("follower").select("follower")) as {
-        data: { follower: string }[] | null;
-      };
-      console.log(data?.filter((item) => item.follower === threadId));
-      if (
-        (data?.filter((item) => item.follower === threadId).length ?? 0) === 0
-      ) {
-        alert(
-          "nav.jin과 팔로워 관계를 확인해주세요! \n 문의는 nav.jin에게 부탁드려요!"
-        );
-        return false;
-      } else return true;
-    };
+  //   const getFollowerData = async () => {
+  //     const { data } = (await supabase.from("follower").select("follower")) as {
+  //       data: { follower: string }[] | null;
+  //     };
+  //     console.log(data?.filter((item) => item.follower === threadId));
+  //     if (
+  //       (data?.filter((item) => item.follower === threadId).length ?? 0) === 0
+  //     ) {
+  //       alert(
+  //         "nav.jin과 팔로워 관계를 확인해주세요! \n 문의는 nav.jin에게 부탁드려요!"
+  //       );
+  //       return false;
+  //     } else return true;
+  //   };
 
-    const isFollower = await getFollowerData().then((res) =>
-      res === false ? false : true
-    );
+  //   const isFollower = await getFollowerData().then((res) =>
+  //     res === false ? false : true
+  //   );
 
-    if (isFollower === false) {
-      return;
-    }
-    document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
-    setCurrentStep(9);
-  };
+  //   if (isFollower === false) {
+  //     return;
+  //   }
+  //   document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
+  //   setCurrentStep(9);
+  // };
   return (
     <div className="pd-4">
       {showTutorial && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
           <div className="relative flex flex-col items-center">
-            {currentStep < 8 && (
+            {currentStep <= 9 && (
               <div className="flex flex-col items-center animate-fade-in">
                 <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative">
                   {messages[currentStep - 1]}
@@ -109,7 +111,7 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
                 />
               </div>
             )}
-            {currentStep === 8 && (
+            {/* {currentStep === 8 && (
               <div className="flex flex-col items-center animate-fade-in">
                 <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative flex justify-center items-center">
                   <input
@@ -137,8 +139,8 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
                   className="rounded-lg mt-2"
                 />
               </div>
-            )}
-            {currentStep > images.length && (
+            )} */}
+            {/* {currentStep > images.length && (
               <Image
                 src="/kuji.png"
                 alt="뽑기 기계"
@@ -158,7 +160,7 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
               >
                 {threadId}님! 이제, <br /> 뽑기 기계를 클릭해주세요!
               </div>
-            )}
+            )} */}
           </div>
         </div>
       )}

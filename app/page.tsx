@@ -1,78 +1,117 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { CoinIntro } from "./components/CoinIntro";
 import { Game } from "./components/Game";
-import { RpsResult } from "./util/game.util";
-import { VictoryToProductsScreen } from "./components/VictoryToProductsScreen";
-import { LoseProductScreen } from "./components/LoseProductScreen";
+import { ResultProductScreen } from "./components/ResultProductScreen";
+import { Omikuji } from "./components/Omikuji";
+import { EventBanner } from "./components/EventBanner";
 import { supabase } from "@/lib/supabase";
 import { getCookie } from "@/lib/util";
-import { PrizeDraw } from "./components/PrizeDraw";
-
-interface ISelectedProducts {
-  follower: string;
-  product_id: string;
-  name: string;
-  request_num: number;
-}
+import { PrizeDrawModal } from "./components/PrizeDraw";
+import { useGameStore, ISelectedProducts } from "./store/gameStore";
 export default function Home() {
-  const [titlePosition, setTitlePosition] = useState<{
-    top: string;
-    transform: string;
-  }>({
-    top: "50%",
-    transform: "translate(-50%, -50%)",
-  });
-  const [backgroundOpacity, setBackgroundOpacity] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
-  const [step, setStep] = useState<number>(1);
-
-  const [totalCoin, setCoin] = useState<number>(2);
-  const [result, setResult] = useState<RpsResult | null>(null);
-
-  const [threadId, setThreadId] = useState("");
-
+  const {
+    titlePosition,
+    setTitlePosition,
+    backgroundOpacity,
+    setBackgroundOpacity,
+    isLoading,
+    setIsLoading,
+    step,
+    setStep,
+    totalCoin,
+    setCoin,
+    setBalance,
+    result,
+    setResult,
+    threadId,
+    setThreadId,
+    opened,
+    setOpened,
+    selectedProduct,
+    setSelectedProduct,
+  } = useGameStore();
+  const [initialPhase, setInitialPhase] = useState<number>(1);
+  const [bannerComplete, setBannerComplete] = useState(false);
   const handleSubmitThreadId = async () => {
     if (threadId.trim() === "" || threadId === null) {
       alert("스레드아이디를 입력해주세요!");
       return;
     }
 
-    const getFollowerData = async () => {
+    try {
+      // follower 확인
       const { data } = (await supabase
-        .from("prize-own")
+        .from("follower")
         .select("follower")
-        .eq("prize_id", 0)) as {
+        .eq("follower", threadId)) as {
         data: { follower: string }[] | null;
       };
-      console.log(data?.filter((item) => item.follower === threadId));
-      if (
-        (data?.filter((item) => item.follower === threadId).length ?? 0) === 0
-      ) {
+
+      const isFollower =
+        data?.filter((item) => item.follower === threadId).length ?? 0;
+
+      if (!isFollower) {
         alert(
-          "nav.jin과 팔로워 관계를 확인해주세요! \n 혹은 폭탄여부를 확인해주세요! \n 문의는 nav.jin에게 부탁드려요!"
+          "팔로우신가요? 팔로우 관계를 확인해주세요!\n문제가 있으시다면 언제나 nav.jin에게 문의주세요!"
         );
-        return false;
-      } else return true;
-    };
+        return;
+      }
 
-    const isFollower = await getFollowerData().then((res) =>
-      res === false ? false : true
-    );
+      // coin-own에서 기존 데이터 조회
+      const { data: coinData } = (await supabase
+        .from("coin-own")
+        .select("coin, go_phase, first, second, third")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single()) as {
+        data: {
+          coin: number;
+          go_phase: number | null;
+          first: string | null;
+          second: string | null;
+          third: string | null;
+        } | null;
+      };
 
-    if (isFollower === false) {
-      return;
+      // coin-own 데이터가 없으면 새로 생성
+      if (!coinData) {
+        await supabase.from("coin-own").insert({
+          follower: threadId,
+          coin: 2,
+          first: "N",
+          second: "N",
+          third: "N",
+          go_phase: 0,
+        });
+
+        setCoin(2);
+        setBalance(2);
+        setResult(null);
+      } else {
+        // 기존 데이터가 있으면 상태 설정
+        setCoin(coinData.coin ?? 2);
+        setBalance(coinData.coin ?? 2);
+      }
+
+      // 쿠키에 threadId 저장
+      document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
+
+      // 다음 스텝으로
+      setStep((prev) => prev + 1);
+    } catch (error) {
+      console.error("Error:", error);
+      alert("사용자 정보 확인 중 오류가 발생했습니다.");
     }
-    document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
-
-    // follwer라면 다음 스텝
-    setStep((prev) => prev + 1);
   };
 
   useEffect(() => {
+    if (!bannerComplete) return;
+
     // Start title animation
     setTimeout(() => {
       setTitlePosition({ top: "1rem", transform: "translateX(-50%)" });
@@ -83,28 +122,114 @@ export default function Home() {
       // Fade out the background
       setBackgroundOpacity(0.3);
       setIsLoading(false);
-      const threadId = getCookie("threadId");
-      if (threadId) {
+      const tId = getCookie("threadId");
+      if (tId) {
+        setThreadId(tId);
         const getFollowerData = async () => {
           const { data } = (await supabase
-            .from("request-prize")
-            .select("follower")
-            .eq("follower", threadId)) as {
+            .from("follower")
+            .select(
+              `follower
+              `
+            )
+            .eq("follower", tId)) as {
             data: { follower: string }[] | null;
           };
 
-          console.log(
-            data?.filter((item) => item.follower === threadId).length
-          );
-          if (
-            (data?.filter((item) => item.follower === threadId).length ?? 0) ===
-            0
-          ) {
-            setStep(3);
+          // follower 면
+          const isFollower =
+            data?.filter((item) => item.follower === tId).length ?? 0;
+          if (isFollower) {
+            // coin-own에서 최신 코인 데이터 조회
+            const { data: coinData } = (await supabase
+              .from("coin-own")
+              .select("coin, go_phase, first, second, third")
+              .eq("follower", tId)
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .single()) as {
+              data: {
+                coin: number;
+                go_phase: number | null;
+                first: string | null;
+                second: string | null;
+                third: string | null;
+              } | null;
+            };
+
+            // coin-own 데이터가 없으면 기본 코인 2개로 생성 후 step 3으로 이동
+            if (!coinData) {
+              await supabase.from("coin-own").insert({
+                follower: tId,
+                coin: 2,
+                first: "N",
+                second: "N",
+                third: "N",
+                go_phase: 0,
+              });
+
+              setCoin(2);
+              setBalance(2);
+              setInitialPhase(1);
+              setStep(3);
+              setResult(null);
+              return;
+            }
+
+            const coinValue = coinData.coin ?? 0;
+
+            if (coinValue <= 0) {
+              // 코인이 0이면 오미쿠지로 이동
+              setCoin(0);
+              setBalance(0);
+              setStep(6);
+              return;
+            }
+
+            // 코인 보유 시 상태 설정
+            setCoin(coinValue);
+            setBalance(coinValue);
+
+            // go_phase에 따른 분기
+            if (coinData.go_phase === 0) {
+              // 상품 선택 단계로 바로 이동
+              setResult("win");
+              setStep(5);
+              setInitialPhase(1);
+              return;
+            }
+
+            let resumePhase = 1;
+            let targetStep = 3;
+
+            // 이미 진행한 단계가 있다면 게임 화면으로 이동
+            if ((coinData.go_phase ?? 0) > 0) {
+              targetStep = 4;
+
+              if (
+                (coinData.go_phase ?? 0) >= 3 &&
+                coinData.first === "Y" &&
+                coinData.second === "N"
+              ) {
+                // 세 번째 가위바위보 세트부터 시작 (intro 7)
+                resumePhase = 7;
+              } else if (
+                (coinData.go_phase ?? 0) >= 2 &&
+                coinData.first === "Y" &&
+                coinData.second === "N"
+              ) {
+                // 두 번째 가위바위보 세트부터 시작 (intro 5)
+                resumePhase = 5;
+              }
+            }
+
+            setInitialPhase(resumePhase);
+            setStep(targetStep);
             return;
           } else {
-            setResult("win");
-            setStep(6);
+            alert(
+              "팔로우신가요? 팔로우 관계를 확인해주세요!\n문제가 있으시다면 언제나 nav.jin에게 문의주세요!"
+            );
             return;
           }
         };
@@ -117,45 +242,43 @@ export default function Home() {
     return () => {
       clearTimeout(timer);
     };
-  }, []);
+  }, [
+    bannerComplete,
+    setBackgroundOpacity,
+    setIsLoading,
+    setThreadId,
+    setStep,
+    setCoin,
+    setBalance,
+    setResult,
+    setTitlePosition,
+  ]);
 
   const handleSelectProduct = async (value: ISelectedProducts) => {
-    const threadId = getCookie("threadId");
-    if (
-      window.confirm(
-        `${value.name}에 응모하시겠습니까?\n변경이 불가하오니 신중하게 골라주세요!`
-      )
-    ) {
-      const response = (await supabase
-        .from("request-prize")
-        .select("follower")
-        .eq("follower", threadId)) as {
-        data: { follower: string }[] | null;
-      };
+    const confirmMessage = value.isRandom
+      ? "랜덤 상품에 응모하시겠습니까?"
+      : `${value.name}에 응모하시겠습니까?`;
 
-      if (response.data?.length || 0 > 0) {
-        alert("이미 응모되었습니다.⭐");
-        setStep((prev) => prev + 1);
+    if (window.confirm(confirmMessage)) {
+      setSelectedProduct(value);
+      if (totalCoin <= 0) {
+        alert("코인이 없습니다ㅠㅠ");
         return;
       }
-
-      const { data } = (await supabase.from("request-prize").insert({
-        follower: threadId,
-        prize_id: value.product_id,
-        request_num: value.request_num,
-      })) as {
-        data: { follower: string }[] | null;
-      };
-
-      setStep((prev) => prev + 1);
+      setOpened(true);
     }
+  };
+
+  const handleClosePrizeDrawModal = () => {
+    setOpened(false);
   };
 
   const handleCoin = async (value?: number) => {
     const { data } = (await supabase
       .from("request-prize")
       .select("request_num")
-      .eq("follower", threadId)) as {
+      .eq("follower", threadId)
+      .eq("phase", 3)) as {
       data: { request_num: number }[] | null;
     };
 
@@ -172,15 +295,23 @@ export default function Home() {
       return;
     }
 
-    setCoin(value ? value : totalCoin + 1);
+    const newCoin = value ? value : totalCoin + 1;
+    setCoin(newCoin);
+    setBalance(newCoin);
   };
+
   useEffect(() => {
     console.log("step changed to:", step);
   }, [step]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      {isLoading && (
+    <div
+      className={`flex min-h-screen justify-center bg-zinc-50 font-sans dark:bg-black ${
+        step >= 5 ? "items-start" : "items-center"
+      }`}
+    >
+      <EventBanner onComplete={() => setBannerComplete(true)} />
+      {bannerComplete && isLoading && (
         <div className="flex h-120px">
           <h1
             className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
@@ -234,6 +365,7 @@ export default function Home() {
       )}
       {!isLoading && step === 3 && (
         <CoinIntro
+          coin={totalCoin}
           handleStep={setStep}
           step={step}
           handleResult={(value) => setResult(value)}
@@ -241,28 +373,31 @@ export default function Home() {
       )}
       {step === 4 && (
         <Game
+          key={initialPhase}
           handleStep={(value) => setStep(value ? value : step + 1)}
-          step={step}
           coin={totalCoin}
           handleResult={(value) => setResult(value)}
           handleCoin={(value) => handleCoin(value ? value : totalCoin + 1)}
+          initialPhase={initialPhase}
         />
       )}
-      {step >= 5 && step < 6 && result === "win" && (
-        <VictoryToProductsScreen
+      {step >= 5 && step < 6 && result && (
+        <ResultProductScreen
+          result={result}
           follower={threadId}
           request_num={totalCoin}
           onSelectProduct={(values) => handleSelectProduct(values)}
         />
       )}
-      {step >= 5 && step < 6 && result === "lose" && (
-        <LoseProductScreen
-          follower={threadId}
-          request_num={totalCoin}
-          onSelectProduct={(values) => handleSelectProduct(values)}
+      {step >= 6 && <Omikuji />}
+      {opened && (
+        <PrizeDrawModal
+          product={selectedProduct}
+          open={opened}
+          threadId={threadId}
+          onClose={handleClosePrizeDrawModal}
         />
       )}
-      {step >= 6 && <PrizeDraw />}
     </div>
   );
 }
