@@ -1,10 +1,8 @@
 import Image from "next/image";
+import { useGameStore } from "../store/gameStore";
 
-interface IConinBalanceProps {
-  balance?: number;
-}
-
-export const CoinBalance = ({ balance = 2 }: IConinBalanceProps) => {
+export const CoinBalance = () => {
+  const { balance } = useGameStore();
   return (
     <>
       {/* 코인 보유량 표시 */}

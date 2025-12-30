@@ -4,14 +4,21 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { CoinBalance } from "./CoinBalance";
 import { BettingComponent } from "./BettingComponent";
+import { supabase } from "@/lib/supabase";
 
 interface ICoinIntroProps {
   step?: number;
+  coin: number;
   handleStep?: (step: number) => void;
   handleResult: (value: "win" | "lose" | "draw") => void;
 }
 
-export function CoinIntro({ step, handleStep, handleResult }: ICoinIntroProps) {
+export function CoinIntro({
+  step,
+  coin,
+  handleStep,
+  handleResult,
+}: ICoinIntroProps) {
   const [animateUp, setAnimateUp] = useState(false);
   const [showNotice, setShowNotice] = useState(false);
 
@@ -31,7 +38,7 @@ export function CoinIntro({ step, handleStep, handleResult }: ICoinIntroProps) {
     };
   }, [handleStep]);
 
-  const handleBettingClick = () => {
+  const handleBettingClick = async () => {
     console.log("배팅 도전 클릭됨");
     if (window.confirm("배팅에 도전하시겠습니까?")) {
       handleStep?.(4);
@@ -39,12 +46,10 @@ export function CoinIntro({ step, handleStep, handleResult }: ICoinIntroProps) {
       return;
     } else {
       alert("배팅이 취소되었습니다.");
-      handleStep?.(5);
-      handleResult("win");
     }
   };
 
-  const handleCancleClick = () => {
+  const handleCancleClick = async () => {
     alert("배팅이 취소되었습니다.");
     handleStep?.(5);
     handleResult("win");
