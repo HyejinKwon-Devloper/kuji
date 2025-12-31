@@ -201,6 +201,14 @@ export default function Home() {
     setOpened(false);
   }, [setOpened]);
 
+  // 코인이 0이 되면 자동으로 오미쿠지로 이동
+  useEffect(() => {
+    if (totalCoin === 0 && step === 5) {
+      setOpened(false);
+      setStep(6);
+    }
+  }, [totalCoin, step, setStep]);
+
   const handleCoin = useCallback(
     async (value?: number) => {
       // DB에서 최신 코인 값 조회
