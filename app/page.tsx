@@ -179,49 +179,55 @@ export default function Home() {
     setTitlePosition,
   ]);
 
-  const handleSelectProduct = async (value: ISelectedProducts) => {
-    const confirmMessage = value.isRandom
-      ? "랜덤 상품에 응모하시겠습니까?"
-      : `${value.name}에 응모하시겠습니까?`;
+  const handleSelectProduct = useCallback(
+    async (value: ISelectedProducts) => {
+      const confirmMessage = value.isRandom
+        ? "랜덤 상품에 응모하시겠습니까?"
+        : `${value.name}에 응모하시겠습니까?`;
 
-    if (window.confirm(confirmMessage)) {
-      setSelectedProduct(value);
-      if (totalCoin <= 0) {
-        alert("코인이 없습니다ㅠㅠ");
+      if (window.confirm(confirmMessage)) {
+        if (totalCoin <= 0) {
+          alert("코인이 없습니다ㅠㅠ");
+          return;
+        }
+        setSelectedProduct(value);
+        setOpened(true);
+      }
+    },
+    [totalCoin, setSelectedProduct, setOpened]
+  );
+
+  const handleClosePrizeDrawModal = useCallback(() => {
+    setOpened(false);
+  }, [setOpened]);
+
+  const handleCoin = useCallback(
+    async (value?: number) => {
+      // DB에서 최신 코인 값 조회
+      const { data: coinData } = await supabase
+        .from("coin-own")
+        .select("coin")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      const latestCoin = coinData?.coin ?? 0;
+
+      // value가 전달되면 그 값 사용, 아니면 DB에서 조회한 값 사용
+      const newCoin = value !== undefined ? value : latestCoin;
+
+      // 5개 제한 체크
+      if (newCoin > 5) {
+        alert("coin은 5개를 넘길 수 없습니다.");
         return;
       }
-      setOpened(true);
-    }
-  };
 
-  const handleClosePrizeDrawModal = () => {
-    setOpened(false);
-  };
-
-  const handleCoin = useCallback(async (value?: number) => {
-    // DB에서 최신 코인 값 조회
-    const { data: coinData } = await supabase
-      .from("coin-own")
-      .select("coin")
-      .eq("follower", threadId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    const latestCoin = coinData?.coin ?? 0;
-
-    // value가 전달되면 그 값 사용, 아니면 DB에서 조회한 값 사용
-    const newCoin = value !== undefined ? value : latestCoin;
-
-    // 5개 제한 체크
-    if (newCoin > 5) {
-      alert("coin은 5개를 넘길 수 없습니다.");
-      return;
-    }
-
-    setCoin(newCoin);
-    setBalance(newCoin);
-  }, [threadId, setCoin, setBalance]);
+      setCoin(newCoin);
+      setBalance(newCoin);
+    },
+    [threadId, setCoin, setBalance]
+  );
 
   return (
     <div

@@ -62,6 +62,7 @@ export function PrizeDrawModal({
   refetchOnOpen = true,
 }: PrizeDrawModalProps) {
   const [drawing, setDrawing] = useState(false);
+  const drawingRef = useRef(false); // 진행 중 플래그
 
   const [view, setView] = useState<ViewState>({
     tickets: 0,
@@ -163,52 +164,65 @@ export function PrizeDrawModal({
   }, [open, onClose]);
 
   const handleDraw = useCallback(async () => {
-    if (!canDraw || !product?.product_id) return;
-
-    setDrawing(true);
-    setView((prev) => ({ ...prev, message: "" }));
-
-    const res = await fetch("/api/draw", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        threadId,
-        prizeId: product.product_id,
-      }),
-    });
-
-    const json = await res.json();
-
-    if (!json.ok) {
-      setView((prev) => ({
-        ...prev,
-        message: json.message ?? "응모 처리 실패",
-      }));
-      setDrawing(false);
+    // 이미 진행 중이면 무시
+    if (drawingRef.current) {
+      console.log("Already drawing, ignoring duplicate call");
       return;
     }
 
-    const remainingTickets =
-      typeof json?.remainingTickets === "number" ? json.remainingTickets : null;
+    if (!canDraw || !product?.product_id) return;
 
-    setView((prev) => ({
-      ...prev,
-      tickets:
-        remainingTickets !== null
-          ? remainingTickets
-          : Math.max(0, prev.tickets - 1),
-      message: json.win
-        ? "축하합니다! 당첨되었습니다."
-        : "아쉽게도 꽝입니다. 다시 도전해보세요.",
-    }));
+    // 즉시 플래그 설정 (중복 호출 방지)
+    drawingRef.current = true;
+    setDrawing(true);
+    setView((prev) => ({ ...prev, message: "" }));
 
-    // 부모 컴포넌트의 코인 상태 업데이트
-    if (onCoinUpdate) {
-      await onCoinUpdate();
+    try {
+      const res = await fetch("/api/draw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          threadId,
+          prizeId: product.product_id,
+        }),
+      });
+
+      const json = await res.json();
+
+      if (!json.ok) {
+        setView((prev) => ({
+          ...prev,
+          message: json.message ?? "응모 처리 실패",
+        }));
+        return;
+      }
+
+      const remainingTickets =
+        typeof json?.remainingTickets === "number"
+          ? json.remainingTickets
+          : null;
+
+      setView((prev) => ({
+        ...prev,
+        tickets:
+          remainingTickets !== null
+            ? remainingTickets
+            : Math.max(0, prev.tickets - 1),
+        message: json.win
+          ? "축하합니다! 당첨되었습니다."
+          : "아쉽게도 꽝입니다. 다시 도전해보세요.",
+      }));
+
+      // 부모 컴포넌트의 코인 상태 업데이트
+      if (onCoinUpdate) {
+        await onCoinUpdate();
+      }
+    } finally {
+      // 항상 플래그와 상태 해제
+      drawingRef.current = false;
+      setDrawing(false);
     }
-
-    setDrawing(false);
-  }, [canDraw, product, threadId, onCoinUpdate]);
+  }, [canDraw, product, threadId]);
 
   if (!open) return null;
 
