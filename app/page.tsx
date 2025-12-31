@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 import { CoinIntro } from "./components/CoinIntro";
 import { Game } from "./components/Game";
@@ -198,7 +198,7 @@ export default function Home() {
     setOpened(false);
   };
 
-  const handleCoin = async (value?: number) => {
+  const handleCoin = useCallback(async (value?: number) => {
     // DB에서 최신 코인 값 조회
     const { data: coinData } = await supabase
       .from("coin-own")
@@ -221,7 +221,7 @@ export default function Home() {
 
     setCoin(newCoin);
     setBalance(newCoin);
-  };
+  }, [threadId, setCoin, setBalance]);
 
   return (
     <div
@@ -316,7 +316,7 @@ export default function Home() {
           threadId={threadId}
           coin={totalCoin}
           onClose={handleClosePrizeDrawModal}
-          onCoinUpdate={async () => await handleCoin()}
+          onCoinUpdate={handleCoin}
         />
       )}
     </div>
