@@ -201,13 +201,17 @@ export default function Home() {
     setOpened(false);
   }, [setOpened]);
 
-  // 코인이 0이 되면 자동으로 오미쿠지로 이동
+  // 코인이 0이 되면 1.5초 후 자동으로 오미쿠지로 이동
   useEffect(() => {
     if (totalCoin === 0 && step === 5) {
-      setOpened(false);
-      setStep(6);
+      const timer = setTimeout(() => {
+        setOpened(false);
+        setStep(6);
+      }, 1500); // 1.5초 후 이동
+
+      return () => clearTimeout(timer);
     }
-  }, [totalCoin, step, setStep]);
+  }, [totalCoin, step, setStep, setOpened]);
 
   const handleCoin = useCallback(
     async (value?: number) => {
