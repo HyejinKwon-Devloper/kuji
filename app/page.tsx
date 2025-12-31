@@ -199,7 +199,12 @@ export default function Home() {
 
   const handleClosePrizeDrawModal = useCallback(() => {
     setOpened(false);
-  }, [setOpened]);
+
+    // 모달을 닫을 때 코인이 0이면 오미쿠지로 이동
+    if (totalCoin <= 0) {
+      setStep(6);
+    }
+  }, [setOpened, totalCoin, setStep]);
 
   const handleCoin = useCallback(
     async (value?: number) => {
