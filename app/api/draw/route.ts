@@ -50,7 +50,7 @@ export async function POST(req: Request) {
      */
     const { data: coinData, error: coinErr } = await supabase
       .from("coin-own")
-      .select("coin")
+      .select("coin, created_at")
       .eq("follower", threadId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -85,11 +85,12 @@ export async function POST(req: Request) {
      */
     const remainingCoin = currentCoin - 1;
 
-    // coin-own 업데이트
+    // coin-own 업데이트 (최신 레코드만)
     const { error: updateErr } = await supabase
       .from("coin-own")
       .update({ coin: remainingCoin })
-      .eq("follower", threadId);
+      .eq("follower", threadId)
+      .eq("created_at", coinData.created_at);
     if (updateErr) {
       return NextResponse.json(
         { ok: false, message: `coin-own 업데이트 실패: ${updateErr.message}` },

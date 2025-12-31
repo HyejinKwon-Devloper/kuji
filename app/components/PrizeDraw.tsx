@@ -39,6 +39,7 @@ interface PrizeDrawModalProps {
   product?: ISelectedProducts;
   coin: number;
   onClose: () => void;
+  onCoinUpdate?: () => Promise<void>;
 
   /** 선택: 모달 열릴 때마다 새로고침할지 */
   refetchOnOpen?: boolean;
@@ -57,6 +58,7 @@ export function PrizeDrawModal({
   threadId,
   coin,
   onClose,
+  onCoinUpdate,
   refetchOnOpen = true,
 }: PrizeDrawModalProps) {
   const [drawing, setDrawing] = useState(false);
@@ -76,11 +78,11 @@ export function PrizeDrawModal({
       open &&
       !view.loading &&
       !drawing &&
-      view.tickets > 0 &&
+      coin > 0 &&
       view.prizeId !== null &&
       view.prize !== null
     );
-  }, [open, view.loading, drawing, view.tickets, view.prizeId, view.prize]);
+  }, [open, view.loading, drawing, coin, view.prizeId, view.prize]);
 
   const fetchState = useCallback(async () => {
     setView((prev) => ({ ...prev, loading: true, message: "" }));
@@ -200,13 +202,16 @@ export function PrizeDrawModal({
         : "아쉽게도 꽝입니다. 다시 도전해보세요.",
     }));
 
+    // 부모 컴포넌트의 코인 상태 업데이트
+    if (onCoinUpdate) {
+      await onCoinUpdate();
+    }
+
     // 전역 잔액 동기화 (헤더 CoinBalance 일관성 유지)
     try {
       const { useGameStore } = await import("../store/gameStore");
-      const { setBalance, setStep } = useGameStore.getState();
+      const { setStep } = useGameStore.getState();
       if (remainingTickets !== null) {
-        setBalance(remainingTickets);
-
         // 코인이 0이 되면 오미쿠지로 이동
         if (remainingTickets === 0) {
           setTimeout(() => {
@@ -279,7 +284,7 @@ export function PrizeDrawModal({
         <div style={containerStyle}>
           <div style={topRowStyle}>
             <div style={ticketPillStyle}>
-              남은 응모권: <strong>{view.tickets}</strong>
+              남은 응모권: <strong>{coin}</strong>
             </div>
             <button
               style={refreshButtonStyle}
