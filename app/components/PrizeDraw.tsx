@@ -86,7 +86,7 @@ export function PrizeDrawModal({
   }, [open, view.loading, drawing, coin, view.prizeId, view.prize]);
 
   const fetchState = useCallback(async () => {
-    setView((prev) => ({ ...prev, loading: true, message: "" }));
+    setView((prev) => ({ ...prev, loading: true }));
 
     if (!threadId) {
       setView((prev) => ({
@@ -121,7 +121,8 @@ export function PrizeDrawModal({
       tickets,
       prizeId: product.product_id,
       prize: { id: product.product_id, name: product.name },
-      message: tickets > 0 ? "" : "응모권이 없습니다.",
+      // 기존 메시지가 있으면 유지, 없으면 코인 체크 메시지 표시
+      message: prev.message || (tickets > 0 ? "" : "응모권이 없습니다."),
     }));
   }, [threadId, product, coin]);
 
