@@ -475,14 +475,28 @@ export const RpsStage = ({
           {/* 상대 선택 결과 */}
           {opponent && result && (
             <div style={resultBoxStyle}>
-              <div style={resultItemStyle}>
-                <span style={resultLabelStyle}>{who}</span>
-                <Image
-                  src={RPS_IMAGE_MAP[opponent]}
-                  alt={opponent}
-                  width={120}
-                  height={120}
-                />
+              <div style={resultRowStyle}>
+                <div style={resultItemStyle}>
+                  <span style={resultLabelStyle}>나</span>
+                  <Image
+                    src={RPS_IMAGE_MAP[selected!]}
+                    alt={selected!}
+                    width={100}
+                    height={100}
+                  />
+                </div>
+
+                <div style={vsTextStyle}>VS</div>
+
+                <div style={resultItemStyle}>
+                  <span style={resultLabelStyle}>{who}</span>
+                  <Image
+                    src={RPS_IMAGE_MAP[opponent]}
+                    alt={opponent}
+                    width={100}
+                    height={100}
+                  />
+                </div>
               </div>
 
               <div style={resultTextStyle}>
@@ -571,11 +585,26 @@ const resultBoxStyle: React.CSSProperties = {
   boxSizing: "border-box",
 };
 
+const resultRowStyle: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "row",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: 16,
+  width: "100%",
+};
+
 const resultItemStyle: React.CSSProperties = {
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 4,
+  gap: 8,
+};
+
+const vsTextStyle: React.CSSProperties = {
+  fontSize: 18,
+  fontWeight: 700,
+  color: "#ef4444",
 };
 
 const resultLabelStyle: React.CSSProperties = {
