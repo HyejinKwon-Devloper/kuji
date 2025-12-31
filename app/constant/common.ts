@@ -48,7 +48,7 @@ const PHASE_CONTENT: Record<
 
 const RPS_OPTIONS = [
   {
-    value: "scissors",
+    value: "scissor",
     label: "가위",
     image: "/scissor.png",
   },
