@@ -62,7 +62,6 @@ export function PrizeDrawModal({
   refetchOnOpen = true,
 }: PrizeDrawModalProps) {
   const [drawing, setDrawing] = useState(false);
-  const autoDrawnRef = useRef(false); // 자동 응모 완료 플래그
 
   const [view, setView] = useState<ViewState>({
     tickets: 0,
@@ -210,28 +209,6 @@ export function PrizeDrawModal({
 
     setDrawing(false);
   }, [canDraw, product, threadId, onCoinUpdate]);
-
-  // 랜덤 상품일 때 자동 응모 (한 번만)
-  useEffect(() => {
-    if (!open || !product?.isRandom) return;
-    if (!canDraw) return;
-    if (autoDrawnRef.current) return; // 이미 자동 응모했으면 실행 안 함
-
-    // 데이터 로딩이 완료된 후 자동 응모
-    const timer = setTimeout(() => {
-      autoDrawnRef.current = true; // 플래그 설정
-      handleDraw();
-    }, 500); // 0.5초 후 자동 응모
-
-    return () => clearTimeout(timer);
-  }, [open, product?.isRandom, canDraw, handleDraw]);
-
-  // 모달이 닫히면 플래그 리셋
-  useEffect(() => {
-    if (!open) {
-      autoDrawnRef.current = false;
-    }
-  }, [open]);
 
   if (!open) return null;
 
