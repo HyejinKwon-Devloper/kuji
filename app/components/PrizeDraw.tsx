@@ -62,6 +62,7 @@ export function PrizeDrawModal({
   refetchOnOpen = true,
 }: PrizeDrawModalProps) {
   const [drawing, setDrawing] = useState(false);
+  const autoDrawnRef = useRef(false); // 자동 응모 완료 플래그
 
   const [view, setView] = useState<ViewState>({
     tickets: 0,
@@ -207,38 +208,30 @@ export function PrizeDrawModal({
       await onCoinUpdate();
     }
 
-    // 전역 잔액 동기화 (헤더 CoinBalance 일관성 유지)
-    try {
-      const { useGameStore } = await import("../store/gameStore");
-      const { setStep } = useGameStore.getState();
-      if (remainingTickets !== null) {
-        // 코인이 0이 되면 오미쿠지로 이동
-        if (remainingTickets === 0) {
-          setTimeout(() => {
-            onClose();
-            setStep(6);
-          }, 2000); // 2초 후 이동
-        }
-      }
-    } catch {
-      // noop: SSR/빌드 문맥에서 에러 방지
-    }
-
     setDrawing(false);
-  }, [canDraw, product, threadId]);
+  }, [canDraw, product, threadId, onCoinUpdate]);
 
-  // 랜덤 상품일 때 자동 응모
+  // 랜덤 상품일 때 자동 응모 (한 번만)
   useEffect(() => {
     if (!open || !product?.isRandom) return;
     if (!canDraw) return;
+    if (autoDrawnRef.current) return; // 이미 자동 응모했으면 실행 안 함
 
     // 데이터 로딩이 완료된 후 자동 응모
     const timer = setTimeout(() => {
+      autoDrawnRef.current = true; // 플래그 설정
       handleDraw();
     }, 500); // 0.5초 후 자동 응모
 
     return () => clearTimeout(timer);
   }, [open, product?.isRandom, canDraw, handleDraw]);
+
+  // 모달이 닫히면 플래그 리셋
+  useEffect(() => {
+    if (!open) {
+      autoDrawnRef.current = false;
+    }
+  }, [open]);
 
   if (!open) return null;
 
