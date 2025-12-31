@@ -99,7 +99,7 @@ export default function Home() {
         const coinValue = coinData.coin ?? 0;
         setCoin(coinValue);
         setBalance(coinValue);
-        
+
         if (coinValue > 0) {
           // 코인이 있으면 상품 선택 화면으로
           setResult("win");
