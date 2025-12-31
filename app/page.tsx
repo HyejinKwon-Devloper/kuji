@@ -120,17 +120,16 @@ export default function Home() {
           if (
             (coinData.go_phase ?? 0) >= 3 &&
             coinData.first === "Y" &&
-            coinData.second === "N"
+            coinData.second === "Y"
           ) {
-            // 세 번째 가위바위보 세트부터 시작
+            // 세 번째 가위바위보 세트부터 시작 (intro 7)
             resumePhase = 7;
-          } else if (
-            (coinData.go_phase ?? 0) >= 2 &&
-            coinData.first === "Y" &&
-            coinData.second === "N"
-          ) {
-            // 두 번째 가위바위보 세트부터 시작
+          } else if ((coinData.go_phase ?? 0) >= 2 && coinData.first === "Y") {
+            // 두 번째 가위바위보 세트부터 시작 (intro 5)
             resumePhase = 5;
+          } else if ((coinData.go_phase ?? 0) >= 1) {
+            // 첫 번째 가위바위보 세트부터 시작 (intro 3)
+            resumePhase = 3;
           }
 
           setInitialPhase(resumePhase);
@@ -200,28 +199,26 @@ export default function Home() {
   };
 
   const handleCoin = async (value?: number) => {
-    const { data } = (await supabase
-      .from("request-prize")
-      .select("request_num")
+    // DB에서 최신 코인 값 조회
+    const { data: coinData } = await supabase
+      .from("coin-own")
+      .select("coin")
       .eq("follower", threadId)
-      .eq("phase", 3)) as {
-      data: { request_num: number }[] | null;
-    };
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
 
-    if (
-      value !== 1 &&
-      data &&
-      data.filter((item) => item.request_num > 5).length > 0
-    ) {
-      alert("coin은 5개를 넘길 수 없습니다.");
-      return;
-    }
-    if (totalCoin >= 5) {
+    const latestCoin = coinData?.coin ?? 0;
+
+    // value가 전달되면 그 값 사용, 아니면 DB에서 조회한 값 사용
+    const newCoin = value !== undefined ? value : latestCoin;
+
+    // 5개 제한 체크
+    if (newCoin > 5) {
       alert("coin은 5개를 넘길 수 없습니다.");
       return;
     }
 
-    const newCoin = value ? value : totalCoin + 1;
     setCoin(newCoin);
     setBalance(newCoin);
   };
