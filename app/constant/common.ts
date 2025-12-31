@@ -78,6 +78,12 @@ const PRODUCT_LIST = [
     description: "비공굿 하시라전 홀로그램 포스트",
   },
   {
+    id: "38",
+    name: "상품 S",
+    image: "/sanemi.jpg",
+    description: "사네미 큐포스켓 세트",
+  },
+  {
     id: "23",
     name: "상품 A",
     image: "/A.jpg",

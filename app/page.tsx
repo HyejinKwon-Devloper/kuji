@@ -36,6 +36,7 @@ export default function Home() {
   } = useGameStore();
   const [initialPhase, setInitialPhase] = useState<number>(1);
   const [bannerComplete, setBannerComplete] = useState(false);
+
   const handleSubmitThreadId = async () => {
     if (threadId.trim() === "" || threadId === null) {
       alert("스레드아이디를 입력해주세요!");
@@ -92,17 +93,22 @@ export default function Home() {
         setCoin(2);
         setBalance(2);
         setResult(null);
+        setStep(3); // 코인 소개 화면으로
       } else {
-        // 기존 데이터가 있으면 상태 설정
-        setCoin(coinData.coin ?? 2);
-        setBalance(coinData.coin ?? 2);
+        // 기존 데이터가 있으면 ProductGrid로 바로 이동
+        const coinValue = coinData.coin ?? 0;
+        setCoin(coinValue);
+        setBalance(coinValue);
+
+        if (coinValue > 0) {
+          // 코인이 있으면 상품 선택 화면으로
+          setResult("win");
+          setStep(5);
+        } else {
+          // 코인이 없으면 오미쿠지로
+          setStep(6);
+        }
       }
-
-      // 쿠키에 threadId 저장
-      document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
-
-      // 다음 스텝으로
-      setStep((prev) => prev + 1);
     } catch (error) {
       console.error("Error:", error);
       alert("사용자 정보 확인 중 오류가 발생했습니다.");
@@ -122,119 +128,7 @@ export default function Home() {
       // Fade out the background
       setBackgroundOpacity(0.3);
       setIsLoading(false);
-      const tId = getCookie("threadId");
-      if (tId) {
-        setThreadId(tId);
-        const getFollowerData = async () => {
-          const { data } = (await supabase
-            .from("follower")
-            .select(
-              `follower
-              `
-            )
-            .eq("follower", tId)) as {
-            data: { follower: string }[] | null;
-          };
-
-          // follower 면
-          const isFollower =
-            data?.filter((item) => item.follower === tId).length ?? 0;
-          if (isFollower) {
-            // coin-own에서 최신 코인 데이터 조회
-            const { data: coinData } = (await supabase
-              .from("coin-own")
-              .select("coin, go_phase, first, second, third")
-              .eq("follower", tId)
-              .order("created_at", { ascending: false })
-              .limit(1)
-              .single()) as {
-              data: {
-                coin: number;
-                go_phase: number | null;
-                first: string | null;
-                second: string | null;
-                third: string | null;
-              } | null;
-            };
-
-            // coin-own 데이터가 없으면 기본 코인 2개로 생성 후 step 3으로 이동
-            if (!coinData) {
-              await supabase.from("coin-own").insert({
-                follower: tId,
-                coin: 2,
-                first: "N",
-                second: "N",
-                third: "N",
-                go_phase: 0,
-              });
-
-              setCoin(2);
-              setBalance(2);
-              setInitialPhase(1);
-              setStep(3);
-              setResult(null);
-              return;
-            }
-
-            const coinValue = coinData.coin ?? 0;
-
-            if (coinValue <= 0) {
-              // 코인이 0이면 오미쿠지로 이동
-              setCoin(0);
-              setBalance(0);
-              setStep(6);
-              return;
-            }
-
-            // 코인 보유 시 상태 설정
-            setCoin(coinValue);
-            setBalance(coinValue);
-
-            // go_phase에 따른 분기
-            if (coinData.go_phase === 0) {
-              // 상품 선택 단계로 바로 이동
-              setResult("win");
-              setStep(5);
-              setInitialPhase(1);
-              return;
-            }
-
-            let resumePhase = 1;
-            let targetStep = 3;
-
-            // 이미 진행한 단계가 있다면 게임 화면으로 이동
-            if ((coinData.go_phase ?? 0) > 0) {
-              targetStep = 4;
-
-              if (
-                (coinData.go_phase ?? 0) >= 3 &&
-                coinData.first === "Y" &&
-                coinData.second === "N"
-              ) {
-                // 세 번째 가위바위보 세트부터 시작 (intro 7)
-                resumePhase = 7;
-              } else if (
-                (coinData.go_phase ?? 0) >= 2 &&
-                coinData.first === "Y" &&
-                coinData.second === "N"
-              ) {
-                // 두 번째 가위바위보 세트부터 시작 (intro 5)
-                resumePhase = 5;
-              }
-            }
-
-            setInitialPhase(resumePhase);
-            setStep(targetStep);
-            return;
-          } else {
-            alert(
-              "팔로우신가요? 팔로우 관계를 확인해주세요!\n문제가 있으시다면 언제나 nav.jin에게 문의주세요!"
-            );
-            return;
-          }
-        };
-        getFollowerData();
-      } else setStep(2);
+      setStep(2);
 
       // After fade, hide background
     }, 2000); // 2 seconds loading
@@ -299,10 +193,6 @@ export default function Home() {
     setCoin(newCoin);
     setBalance(newCoin);
   };
-
-  useEffect(() => {
-    console.log("step changed to:", step);
-  }, [step]);
 
   return (
     <div
