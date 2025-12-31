@@ -96,9 +96,9 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
     <div className="pd-4">
       {showTutorial && (
         <div className="fixed inset-0 flex items-center justify-center z-50">
-          <div className="relative flex flex-col items-center">
+          <div className="relative flex flex-col items-center animate-fade-in">
             {currentStep <= 9 && (
-              <div className="flex flex-col items-center animate-fade-in">
+              <>
                 <div className="bg-white text-black px-4 py-2 rounded-lg shadow-lg mb-4 after:content-[''] after:absolute after:bottom-[-8px] after:left-1/2 after:transform after:-translate-x-1/2 after:border-l-8 after:border-r-8 after:border-t-8 after:border-l-transparent after:border-r-transparent after:border-t-white relative">
                   {messages[currentStep - 1]}
                 </div>
@@ -109,7 +109,7 @@ export const Tutorial = ({ handleGumble }: TutorialProps) => {
                   height={425}
                   className="rounded-lg mt-2"
                 />
-              </div>
+              </>
             )}
             {/* {currentStep === 8 && (
               <div className="flex flex-col items-center animate-fade-in">
