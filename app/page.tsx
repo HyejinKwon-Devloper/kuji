@@ -316,6 +316,7 @@ export default function Home() {
           threadId={threadId}
           coin={totalCoin}
           onClose={handleClosePrizeDrawModal}
+          onCoinUpdate={async () => await handleCoin()}
         />
       )}
     </div>
