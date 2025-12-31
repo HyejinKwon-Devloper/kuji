@@ -95,19 +95,51 @@ export default function Home() {
         setResult(null);
         setStep(3); // 코인 소개 화면으로
       } else {
-        // 기존 데이터가 있으면 ProductGrid로 바로 이동
+        // 기존 데이터가 있을 때
         const coinValue = coinData.coin ?? 0;
         setCoin(coinValue);
         setBalance(coinValue);
 
-        if (coinValue > 0) {
-          // 코인이 있으면 상품 선택 화면으로
+        // 코인이 0이면 오미쿠지로
+        if (coinValue <= 0) {
+          setStep(6);
+          return;
+        }
+
+        // go_phase가 0이면 가위바위보 완료 → ProductGrid로
+        if (coinData.go_phase === 0) {
           setResult("win");
           setStep(5);
-        } else {
-          // 코인이 없으면 오미쿠지로
-          setStep(6);
+          return;
         }
+
+        // go_phase가 0보다 크면 가위바위보 진행 중 → 게임 화면으로 복귀
+        if ((coinData.go_phase ?? 0) > 0) {
+          let resumePhase = 1;
+
+          if (
+            (coinData.go_phase ?? 0) >= 3 &&
+            coinData.first === "Y" &&
+            coinData.second === "N"
+          ) {
+            // 세 번째 가위바위보 세트부터 시작
+            resumePhase = 7;
+          } else if (
+            (coinData.go_phase ?? 0) >= 2 &&
+            coinData.first === "Y" &&
+            coinData.second === "N"
+          ) {
+            // 두 번째 가위바위보 세트부터 시작
+            resumePhase = 5;
+          }
+
+          setInitialPhase(resumePhase);
+          setStep(4); // 게임 화면으로
+          return;
+        }
+
+        // 기본값: 코인 소개 화면
+        setStep(3);
       }
     } catch (error) {
       console.error("Error:", error);
