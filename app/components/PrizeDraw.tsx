@@ -37,6 +37,7 @@ interface PrizeDrawModalProps {
   open: boolean;
   threadId: string;
   product?: ISelectedProducts;
+  coin: number;
   onClose: () => void;
 
   /** 선택: 모달 열릴 때마다 새로고침할지 */
@@ -54,6 +55,7 @@ export function PrizeDrawModal({
   open,
   product,
   threadId,
+  coin,
   onClose,
   refetchOnOpen = true,
 }: PrizeDrawModalProps) {
@@ -107,25 +109,8 @@ export function PrizeDrawModal({
       return;
     }
 
-    // ✅ coin-own에서 최신 코인(응모권) 조회
-    const { data: coinRow, error } = await supabase
-      .from("coin-own")
-      .select("coin")
-      .eq("follower", threadId)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-
-    if (error) {
-      setView((prev) => ({
-        ...prev,
-        loading: false,
-        message: `응모권 조회 실패: ${error.message}`,
-      }));
-      return;
-    }
-
-    const tickets = coinRow?.coin ?? 0;
+    // ✅ props로 전달받은 코인 값 사용
+    const tickets = coin ?? 0;
 
     setView((prev) => ({
       ...prev,
@@ -135,7 +120,7 @@ export function PrizeDrawModal({
       prize: { id: product.product_id, name: product.name },
       message: tickets > 0 ? "" : "응모권이 없습니다.",
     }));
-  }, [threadId, product]);
+  }, [threadId, product, coin]);
 
   // open 시점에만 fetch (StrictMode에서도 중복 호출 방지)
   useEffect(() => {

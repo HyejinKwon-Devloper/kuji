@@ -317,6 +317,7 @@ export default function Home() {
           product={selectedProduct}
           open={opened}
           threadId={threadId}
+          coin={totalCoin}
           onClose={handleClosePrizeDrawModal}
         />
       )}
