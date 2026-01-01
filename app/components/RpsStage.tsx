@@ -373,7 +373,7 @@ export const RpsStage = ({
       if (latestCoin) {
         await supabase
           .from("coin-own")
-          .update({ coin: newCoin, third: "Y", go_phase: 3 })
+          .update({ coin: newCoin, third: "Y", go_phase: 0 })
           .eq("follower", threadId)
           .eq("created_at", latestCoin.created_at);
       }

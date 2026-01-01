@@ -36,12 +36,17 @@ export default function Home() {
   } = useGameStore();
   const [initialPhase, setInitialPhase] = useState<number>(1);
   const [bannerComplete, setBannerComplete] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false); // 중복 실행 방지
 
   const handleSubmitThreadId = async () => {
+    if (isSubmitting) return; // 이미 실행 중이면 무시
+
     if (threadId.trim() === "" || threadId === null) {
       alert("스레드아이디를 입력해주세요!");
       return;
     }
+
+    setIsSubmitting(true); // 실행 플래그 설정
 
     try {
       // follower 확인
@@ -81,14 +86,25 @@ export default function Home() {
 
       // coin-own 데이터가 없으면 새로 생성
       if (!coinData) {
-        await supabase.from("coin-own").insert({
-          follower: threadId,
-          coin: 2,
-          first: "N",
-          second: "N",
-          third: "N",
-          go_phase: 0,
-        });
+        // upsert를 사용하여 중복 insert 방지
+        const { error: upsertError } = await supabase.from("coin-own").upsert(
+          {
+            follower: threadId,
+            coin: 2,
+            first: "N",
+            second: "N",
+            third: "N",
+            go_phase: 0,
+          },
+          {
+            onConflict: "follower",
+            ignoreDuplicates: false,
+          }
+        );
+
+        if (upsertError) {
+          console.error("coin-own upsert error:", upsertError);
+        }
 
         setCoin(2);
         setBalance(2);
@@ -143,6 +159,8 @@ export default function Home() {
     } catch (error) {
       console.error("Error:", error);
       alert("사용자 정보 확인 중 오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false); // 실행 완료 후 플래그 해제
     }
   };
 
