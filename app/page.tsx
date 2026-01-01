@@ -165,7 +165,8 @@ export default function Home() {
   };
 
   useEffect(() => {
-    if (!bannerComplete) return;
+    setStep(6);
+    // if (!bannerComplete) return;
 
     // Start title animation
     setTimeout(() => {
@@ -177,7 +178,7 @@ export default function Home() {
       // Fade out the background
       setBackgroundOpacity(0.3);
       setIsLoading(false);
-      setStep(2);
+      // setStep(2);
 
       // After fade, hide background
     }, 2000); // 2 seconds loading
@@ -265,8 +266,8 @@ export default function Home() {
         step >= 5 ? "items-start" : "items-center"
       }`}
     >
-      <EventBanner onComplete={() => setBannerComplete(true)} />
-      {bannerComplete && isLoading && (
+      {/* <EventBanner onComplete={() => setBannerComplete(true)} /> */}
+      {/* {bannerComplete && isLoading && (
         <div className="flex h-120px">
           <h1
             className="bg-transparent fixed left-1/2 text-lg sm:text-2xl font-bold text-black dark:text-white z-50 text-center transition-all duration-1000 ease-out"
@@ -279,7 +280,7 @@ export default function Home() {
             <span className="block sm:inline">오신걸 환영합니다!</span>
           </h1>
         </div>
-      )}
+      )} */}
       <div className="" style={{ opacity: backgroundOpacity }}>
         <Image
           src="/hashira.webp"
