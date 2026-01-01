@@ -9,7 +9,6 @@ import { ResultProductScreen } from "./components/ResultProductScreen";
 import { Omikuji } from "./components/Omikuji";
 import { EventBanner } from "./components/EventBanner";
 import { supabase } from "@/lib/supabase";
-import { getCookie } from "@/lib/util";
 import { PrizeDrawModal } from "./components/PrizeDraw";
 import { useGameStore, ISelectedProducts } from "./store/gameStore";
 export default function Home() {

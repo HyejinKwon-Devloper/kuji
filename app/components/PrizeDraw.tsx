@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase";
 import {
   PRODUCT_LIST,
   BOMB_PRODUCTS,
@@ -223,7 +222,7 @@ export function PrizeDrawModal({
       drawingRef.current = false;
       setDrawing(false);
     }
-  }, [canDraw, product, threadId]);
+  }, [canDraw, product, threadId, onCoinUpdate]);
 
   if (!open) return null;
 
