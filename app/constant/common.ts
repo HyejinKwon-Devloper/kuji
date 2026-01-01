@@ -208,6 +208,12 @@ const PRODUCT_LIST = [
     image: "/F-6.jpg",
     description: "사네미 오하기 뱃지",
   },
+  {
+    id: "39",
+    name: "상품 F",
+    image: "/F-4.jpg",
+    description: "이노스케 이즐 태피스트리 - coaal❤️",
+  },
 ];
 
 // 꽝 상품 10개
