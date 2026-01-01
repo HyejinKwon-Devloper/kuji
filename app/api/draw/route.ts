@@ -149,8 +149,8 @@ export async function POST(req: Request) {
      */
     if (win) {
       // 🔥 당첨 처리
-      // 행운 상품은 실제 prizeId가 없으므로 0으로 저장
-      const winPrizeId = isLucky ? "0" : prizeId;
+      // 행운 상품은 9999로 저장
+      const winPrizeId = isLucky ? "9999" : prizeId;
 
       await supabase.from("prize-own").insert({
         follower: threadId,

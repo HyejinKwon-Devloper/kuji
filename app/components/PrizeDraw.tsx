@@ -170,7 +170,19 @@ export function PrizeDrawModal({
       return;
     }
 
-    if (!canDraw || !product?.product_id) return;
+    console.log(
+      "handleDraw - canDraw:",
+      canDraw,
+      "coin:",
+      coin,
+      "product:",
+      product?.product_id
+    );
+
+    if (!canDraw || !product?.product_id) {
+      console.log("Cannot draw - canDraw:", canDraw, "coin:", coin);
+      return;
+    }
 
     // 즉시 플래그 설정 (중복 호출 방지)
     drawingRef.current = true;

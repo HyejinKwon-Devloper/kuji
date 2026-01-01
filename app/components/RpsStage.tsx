@@ -318,7 +318,7 @@ export const RpsStage = ({
     if (state.phase < 8) {
       const newCoin = curruntCoin + 1;
 
-      // coin-own 업데이트
+      // coin-own 업데이트 또는 생성
       const threadId = document.cookie
         .split("; ")
         .find((row) => row.startsWith("threadId="))
@@ -335,6 +335,7 @@ export const RpsStage = ({
           .single();
 
         if (latestCoin) {
+          // 기존 레코드가 있으면 업데이트
           // phase에 따라 업데이트할 필드 결정
           const updateData: any = { coin: newCoin };
           if (state.phase === 4) {
@@ -350,6 +351,25 @@ export const RpsStage = ({
             .update(updateData)
             .eq("follower", threadId)
             .eq("created_at", latestCoin.created_at);
+        } else {
+          // 레코드가 없으면 새로 생성 (배팅하기로 첫 판 승리한 경우)
+          // insert 직전에 다시 한번 확인하여 중복 방지
+          const { data: doubleCheck } = await supabase
+            .from("coin-own")
+            .select("follower")
+            .eq("follower", threadId)
+            .maybeSingle();
+
+          if (!doubleCheck) {
+            await supabase.from("coin-own").insert({
+              follower: threadId,
+              coin: newCoin,
+              go_phase: state.phase === 4 ? 1 : state.phase === 6 ? 2 : 0,
+              first: state.phase === 4 ? "Y" : "N",
+              second: state.phase === 6 ? "Y" : "N",
+              third: "N",
+            });
+          }
         }
       }
 
@@ -402,11 +422,60 @@ export const RpsStage = ({
 
     const nextIndex = state.groupIndex + 1;
 
+    console.log(
+      "handleGo - current groupIndex:",
+      state.groupIndex,
+      "nextIndex:",
+      nextIndex
+    );
+
     // 다음 그룹이 없으면(즉 3판 끝) 여기서는 win 처리 혹은 종료
     if (nextIndex >= STAGE_GROUPS.length) {
       onResult?.("win");
       handleStep?.();
       return;
+    }
+
+    // GO 버튼 클릭 시 go_phase 업데이트 (다음 단계 진입)
+    const threadId = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("threadId="))
+      ?.split("=")[1];
+
+    if (threadId) {
+      const { data: latestCoin } = await supabase
+        .from("coin-own")
+        .select("created_at, go_phase")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+
+      if (latestCoin) {
+        // 다음 단계의 go_phase 설정
+        // groupIndex 0(1단계 완료) → go_phase 2 (2단계 시작)
+        // groupIndex 1(2단계 완료) → go_phase 3 (3단계 시작)
+        const nextGoPhase = nextIndex + 1;
+
+        console.log(
+          "handleGo - current go_phase:",
+          latestCoin.go_phase,
+          "updating to:",
+          nextGoPhase
+        );
+
+        const { error } = await supabase
+          .from("coin-own")
+          .update({ go_phase: nextGoPhase })
+          .eq("follower", threadId)
+          .eq("created_at", latestCoin.created_at);
+
+        if (error) {
+          console.error("handleGo - update error:", error);
+        } else {
+          console.log("handleGo - go_phase updated successfully");
+        }
+      }
     }
 
     const nextGroup = nextIndex as GroupIndex;
