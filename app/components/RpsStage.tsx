@@ -275,6 +275,7 @@ export const RpsStage = ({
           .single();
 
         if (latestCoin) {
+          // 기존 레코드가 있으면 업데이트
           await supabase
             .from("coin-own")
             .update({
@@ -286,6 +287,16 @@ export const RpsStage = ({
             })
             .eq("follower", threadId)
             .eq("created_at", latestCoin.created_at);
+        } else {
+          // 레코드가 없으면 새로 생성 (첫 판에서 바로 진 경우)
+          await supabase.from("coin-own").insert({
+            follower: threadId,
+            coin: 1,
+            go_phase: 0,
+            first: "N",
+            second: "N",
+            third: "N",
+          });
         }
       }
 
