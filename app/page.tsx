@@ -109,12 +109,19 @@ export default function Home() {
         setCoin(2);
         setBalance(2);
         setResult(null);
+
+        // 쿠키에 threadId 저장 (RpsStage 등에서 사용)
+        document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
+
         setStep(3); // 코인 소개 화면으로
       } else {
         // 기존 데이터가 있을 때
         const coinValue = coinData.coin ?? 0;
         setCoin(coinValue);
         setBalance(coinValue);
+
+        // 쿠키에 threadId 저장 (RpsStage 등에서 사용)
+        document.cookie = `threadId=${threadId}; path=/; max-age=31536000`;
 
         // 코인이 0이면 오미쿠지로
         if (coinValue <= 0) {
