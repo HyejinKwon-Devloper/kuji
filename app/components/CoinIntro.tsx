@@ -51,6 +51,36 @@ export function CoinIntro({
 
   const handleCancleClick = async () => {
     alert("배팅이 취소되었습니다.");
+
+    // 건너뛰기 시 coin-own 레코드 생성 (배팅 안하고 바로 상품 선택으로)
+    const threadId = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("threadId="))
+      ?.split("=")[1];
+
+    if (threadId) {
+      // 기존 레코드 확인
+      const { data: existingCoin } = await supabase
+        .from("coin-own")
+        .select("follower")
+        .eq("follower", threadId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      // 레코드가 없으면 생성
+      if (!existingCoin) {
+        await supabase.from("coin-own").insert({
+          follower: threadId,
+          coin: 2, // 초기 코인 2개
+          go_phase: 0, // 게임 완료 상태
+          first: "N",
+          second: "N",
+          third: "N",
+        });
+      }
+    }
+
     handleStep?.(5);
     handleResult("win");
   };

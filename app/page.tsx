@@ -9,7 +9,6 @@ import { ResultProductScreen } from "./components/ResultProductScreen";
 import { Omikuji } from "./components/Omikuji";
 import { EventBanner } from "./components/EventBanner";
 import { supabase } from "@/lib/supabase";
-import { getCookie } from "@/lib/util";
 import { PrizeDrawModal } from "./components/PrizeDraw";
 import { useGameStore, ISelectedProducts } from "./store/gameStore";
 export default function Home() {
@@ -86,24 +85,18 @@ export default function Home() {
 
       // coin-own 데이터가 없으면 새로 생성
       if (!coinData) {
-        // upsert를 사용하여 중복 insert 방지
-        const { error: upsertError } = await supabase.from("coin-own").upsert(
-          {
-            follower: threadId,
-            coin: 2,
-            first: "N",
-            second: "N",
-            third: "N",
-            go_phase: 0,
-          },
-          {
-            onConflict: "follower",
-            ignoreDuplicates: false,
-          }
-        );
+        // insert를 사용하여 새 레코드 생성
+        const { error: insertError } = await supabase.from("coin-own").insert({
+          follower: threadId,
+          coin: 2,
+          first: "N",
+          second: "N",
+          third: "N",
+          go_phase: 0,
+        });
 
-        if (upsertError) {
-          console.error("coin-own upsert error:", upsertError);
+        if (insertError) {
+          console.error("coin-own insert error:", insertError);
         }
 
         setCoin(2);

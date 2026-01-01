@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
-import { Phetsarath } from "next/font/google";
 
 export async function POST(req: Request) {
   try {
@@ -69,7 +68,7 @@ export async function POST(req: Request) {
      * 3️⃣ 확률 계산
      * - 꽝: 무조건 실패 (win = false)
      * - 행운: 무조건 성공 (win = true)
-     * - 일반 상품: 1/30 확률
+     * - 일반 상품: 1/20 확률
      */
     let win: boolean;
     if (isBomb) {
@@ -77,7 +76,7 @@ export async function POST(req: Request) {
     } else if (isLucky) {
       win = true; // 행운은 무조건 성공
     } else {
-      win = Math.floor(Math.random() * 30) === 0; // 일반 상품은 1/30 확률
+      win = Math.floor(Math.random() * 20) === 0; // 일반 상품은 1/20 확률
     }
 
     /**
@@ -150,8 +149,8 @@ export async function POST(req: Request) {
      */
     if (win) {
       // 🔥 당첨 처리
-      // 행운 상품은 실제 prizeId가 없으므로 0으로 저장
-      const winPrizeId = isLucky ? "0" : prizeId;
+      // 행운 상품은 9999로 저장
+      const winPrizeId = isLucky ? "9999" : prizeId;
 
       await supabase.from("prize-own").insert({
         follower: threadId,

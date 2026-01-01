@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
-import { supabase } from "@/lib/supabase";
 import {
   PRODUCT_LIST,
   BOMB_PRODUCTS,
@@ -171,7 +170,19 @@ export function PrizeDrawModal({
       return;
     }
 
-    if (!canDraw || !product?.product_id) return;
+    console.log(
+      "handleDraw - canDraw:",
+      canDraw,
+      "coin:",
+      coin,
+      "product:",
+      product?.product_id
+    );
+
+    if (!canDraw || !product?.product_id) {
+      console.log("Cannot draw - canDraw:", canDraw, "coin:", coin);
+      return;
+    }
 
     // 즉시 플래그 설정 (중복 호출 방지)
     drawingRef.current = true;
@@ -223,7 +234,7 @@ export function PrizeDrawModal({
       drawingRef.current = false;
       setDrawing(false);
     }
-  }, [canDraw, product, threadId]);
+  }, [canDraw, product, threadId, onCoinUpdate]);
 
   if (!open) return null;
 
